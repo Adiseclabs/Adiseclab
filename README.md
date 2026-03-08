@@ -1,4 +1,4 @@
-# AdiSecLab — Elite Bug Bounty Intelligence Platform
+# AdiSecLab Elite Bug Bounty Intelligence Platform
 
 <div align="center">
 
